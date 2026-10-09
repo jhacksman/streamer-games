@@ -1,0 +1,10 @@
+{
+  "name": "@sg/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./physics": "./src/physics/index.ts",
+    "./person": "./src/person/person.ts"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "phase0-viewer",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--config", "spikes/phase0/viewer/vite.config.ts"],
+      "port": 5180
+    }
+  ]
+}

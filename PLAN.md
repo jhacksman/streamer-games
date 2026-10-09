@@ -153,7 +153,8 @@ Sources:
 | Viewer website | A static site. Viewers talk only to **our relay server** (§5), which needs a backend. Scale: **100 website players to start, built to grow to 10k+**. A custom short domain is optional (see §16). |
 | Games | Chat Tower first, Fartman second. All games live in one app and share profiles and skins. |
 | Turn length (Tower) | A host setting, default 3 s. Auto-drop when it runs out. |
-| Player controls (Tower + Bridge) | **Limbs are tucked in by default** (a ball). **Hold a limb key to extend that limb straight out**; release to tuck it back. **Head: hold to extend the neck.** Four limbs plus the neck give **32 shapes**. **Right hand:** J K L ; = limbs, **, (comma) = neck**, **I / O = slowly rotate** counter-clockwise / clockwise. **Left hand (mirror):** A S D F = limbs, **X = neck**, **W / E = rotate**. No mouse. Live for website players and hotseat; chat players type a shape and angle. Remappable. *(Set by you.)* |
+| Player controls (Tower + Bridge) | **Limbs and neck are short stubs by default**; **hold a key to stretch that one out**, release to pull it back in. Four limbs plus the neck give **32 shapes**. **Right hand:** J K L ; = limbs, **, = neck**, **I / O = rotate**, **U / P = drift left / right**. **Left hand (mirror):** A S D F = limbs, **X = neck**, **W / E = rotate**, **Q / R = drift**. No mouse. Live for website players and hotseat; chat players type a shape and angle. Remappable. *(Set by you.)* |
+| The people | **Stumpy little humans, Mount Your Friends style**, whose **head, hands, and feet are sticky orbs** (World of Goo). One body plus five orbs on five stretch joints. **The streamer is the same person frozen in a T-pose.** *(Set by you; built in Phase 0.)* |
 | Skins | Cosmetic only. Chat commands, Twitch emote or profile-picture faces, channel/sub presets, and a website skin editor. |
 | Betting and prizes | **Never with Bits** (real money; Twitch bans Bits wagers). Betting uses **Scrap**, a free game currency topped up with channel points, plus optional **Twitch Predictions**. Bits only buy effects, for glory. See §11b. |
 
@@ -193,7 +194,7 @@ Sources:
 | Host app | **Electron** wrapping the same web code, with **steamworks.js** for Steam (Cloud saves, achievements, overlay) | **One codebase** for the Steam game and the viewer website. Viewers' live view uses the exact same renderer. Electron is a normal way to ship web-tech games on Steam. During development the host also runs in a plain browser tab, **with no Twitch login there**: simulated chat and anonymous chat reading only, so tokens never live in a web page. |
 | Language | **TypeScript everywhere**: host app, viewer website, relay | Shared message and skin types across all three. Fewer mismatch bugs, and the language AI coding sessions handle best. |
 | Game framework | **Phaser 4** (4.2.1, July 2026; WebGL) | Scenes, input, audio, cameras, particles, text, asset loading, and **Tiled map loading** for Fartman. Runs the same in Electron and phone browsers. |
-| Physics | **Box2D v3** via **box2d3-wasm** (WASM + SIMD), with **Planck.js 1.5** as the fallback. Phase 0 is a head-to-head. | See below. Physics runs only on the host, plus in Fartman play-along on viewers' own machines. |
+| Physics | **Box2D v3** via **box2d3-wasm 5.2.0** (Box2D v3.2, WASM). **Chosen in Phase 0** ([results](spikes/phase0/RESULTS.md)): 4–7× faster than Planck, bit-identical across Node, Chrome, and both builds. Planck.js stays behind the adapter as a fallback. | Physics runs only on the host, plus in Fartman play-along on viewers' own machines. |
 | Build | **Vite** | One build for Electron and the website. |
 | Chat | Anonymous IRC (works without login), upgraded to **EventSub** once the streamer logs in | Message tags give `user-id`, `display-name`, `color`, `badges`, and `emotes`. |
 | Streamer login | **Twitch device code flow**: the app opens twitch.tv/activate in the streamer's browser **with the code pre-filled** | Made for desktop apps. No client secret, no server. |
@@ -453,33 +454,43 @@ export default {
 
 ---
 
-## 9. The shared Person (ragdoll)
+## 9. The shared Person
 
-- **11 parts:** head, chest, hips, 2 upper arms, 2 forearms, 2 thighs, 2 shins. About 1.8 m tall, with roughly human joint limits.
-- **Three states:**
-  - **`ragdoll`**: one body per part, revolute joints with limits.
-  - **`frozen`**: all parts merged into **one rigid body**. A 50-person tower is about 50 bodies, not about 550, which keeps it stable and cheap.
-  - **`posed`**: frozen in a chosen pose.
-- **`freeze()` / `unfreeze()`:** merge or split, carrying momentum across.
-- **Limb control:**
-  - **Default: tucked.** Joint motors hold the limbs pulled in (knees and elbows bent, a ball shape).
-  - **Hold a limb key: that limb extends straight out.** Arms go out from the shoulders, legs out from the hips. Release and it tucks back in.
-  - **Neck:** tucked, the head sits chin-down on the chest. **Hold the neck key and the neck straightens and stretches out**, using a short prismatic (sliding) joint so it actually gets longer. That gives a headbutt reach for wedging into gaps.
-  - Combinations make shapes. All four limbs out is a star, nothing out is a ball, one arm and the opposite leg is a diagonal hook, and so on. With the neck that's **32 shapes**, and freezing on contact locks in whichever you hold.
-  - Motor torque is capped, so limbs still swing and flop a little rather than snapping like a robot.
-  - **Rotate:** hold I (counter-clockwise) or O (clockwise) to **slowly** turn the whole body. While hanging, the crane claw turns. While falling, a capped torque on the chest turns it ("air control"). Slow on purpose, so it's for lining up a landing, not spinning.
-  - **Two mirrored layouts**, so either hand works:
+*(Redesigned during Phase 0 from your feedback. Code: `packages/engine/src/person/person.ts`.)*
 
-    | | Left arm | Left leg | Right leg | Right arm | Neck | Rotate CCW | Rotate CW |
-    |---|---|---|---|---|---|---|---|
-    | Right hand | J | K | L | ; | , | I | O |
-    | Left hand | A | S | D | F | X | W | E |
+- **The look:** a **stumpy little human**, Mount Your Friends style:
+  - a chunky torso in shorts
+  - thick, short arms and legs
+  - an outlined cartoon look
+  - a cute face
 
-    In both layouts the rotate keys sit right above the limb keys and the neck key sits right below. Both layouts are always active and remappable. On phones: **five body buttons plus two rotate buttons**, and that's the whole controller.
-  - **Chat shapes** use the same extend/tuck, named by which parts are out: `star` (all four limbs), `ball` (nothing), or letters from either layout (`drop jl`, `drop asx`). In chat, `x` means the neck, to avoid commas.
-- **Looks:** the skin (§13) is drawn over the physics shapes. **Skins never change shapes, mass, or hitbox.**
-  - Name tag over the head.
-  - Simple face that switches to X-eyes after a collapse.
+  Its **head, hands, and feet are round sticky orbs**, World of Goo style.
+- **The physics:** one **body** plus **five orbs** (head, two hands, two feet). Each orb rides a **stretch (prismatic) joint** along a fixed direction from the body: neck up, arms out, legs down.
+  - That's **6 bodies and 5 joints**, down from 11 and 10.
+  - The limbs themselves are drawn, not simulated. Only the body and the orbs collide.
+- **Short until pressed:** every limb and the neck are **short stubs by default**. **Hold the key and that one stretches out**, about 5× longer for arms. Release and it pulls back in. The stretch is motor-driven and force-capped, so it has a little give.
+- **Shapes:** four limbs plus the neck give **32 shapes**, and freezing on contact locks in whichever you're holding. Strategy is choosing the shape and timing the landing.
+- **Air control while hanging or falling:**
+  - **rotate** slowly (I/O or W/E)
+  - **drift** sideways (U/P or Q/R)
+
+  Both have capped speeds, so they nudge the landing rather than letting you fly.
+- **States:**
+  - **live**: body and orbs on their joints
+  - **frozen**: merged into **one rigid body**, momentum preserved, so a 50-person tower is about 50 bodies
+  - `unfreeze()` splits them back apart, keeping the motion
+- **Only the orbs are sticky.** A head, hand, or foot touching another person bonds; body-to-body just collides.
+- **Controls:**
+
+  | | ← drift | ↺ rotate | ↻ rotate | drift → | L arm | L leg | R leg | R arm | Neck |
+  |---|---|---|---|---|---|---|---|---|---|
+  | Right hand | U | I | O | P | J | K | L | ; | , |
+  | Left hand | Q | W | E | R | A | S | D | F | X |
+
+  Both layouts are always active and remappable. On phones: five stretch buttons, two rotate buttons, two drift buttons.
+- **Chat shapes** name which parts are out: `star` (all four limbs), `ball` (nothing), or letters from either layout (`drop jl`, `drop asx`, where `x` is the neck), plus an optional angle.
+- **The streamer** is the same person, frozen in a **T-pose** (arms straight out sideways). That gives three wide landing spots: both hands and the head.
+- **Skins** (§13) are drawn on top and never change the physics. Name tag over the head; X-eyes for debris.
 
 ---
 
@@ -490,7 +501,7 @@ export default {
 1. **Start.** The streamer's guy stands in the middle of the ground with his arms up.
 2. **Join.** Viewers join by `!join` (or `drop` when it isn't their turn), by the website's Join button, or with a channel-point "skip the queue."
 3. **Turn.**
-   - A claw-machine crane holds the viewer's ragdoll **by the back** above the tower. The limbs dangle as it sways.
+   - A claw-machine crane holds the viewer's person **by the back** above the tower, limbs tucked. Live players slide the claw with U/P or Q/R.
    - A name tag and a countdown show above it; turn length is a setting, default 3 s.
    - **"UP NEXT: @name"** shows one turn ahead.
 4. **Drop.**
@@ -542,26 +553,31 @@ export default {
 **Like World of Goo struts forming wherever balls touch, every connection in the tower is a real physics joint.**
 
 - **Bonds form on touch.**
-  - When a limb or head of one landed person touches a limb or head of another landed person, a **soft weld (bond)** forms at the contact point.
-  - It's driven by Box2D contact events after each step, then the weld is created between steps.
-  - Torso-to-torso contact just collides; bonding is limbs and heads only.
+  - When a **sticky orb** (head, hand, foot) of one landed person touches another landed person, a **soft weld (bond)** forms there.
+  - Touches are found geometrically every 0.1 s (orbs as circles, the body as a capsule). Bonded pairs don't collide, because a weld locked onto an overlap fights the contact solver (Phase 0 finding).
+  - Body-to-body contact just collides.
 - **Limits, so it stays a wobbly web and not one rigid blob:**
-  - one bond per pair of body parts
+  - **one bond (one weld) per pair of people.** More touches between the same pair **widen** that bond instead of adding a weld; two welds between the same pair fight each other.
   - at most about 4 bonds per person (tuning)
   - bonds only form at low relative speed. A hard smack bumps instead of glues.
-- **Failure load, split by direction** *(your call: compression is super strong, so towers get big)*:
-  - Each step, the bond's force (`b2Joint_GetConstraintForce`) is split along the bond's axis (from one body's center to the other's) into **compression** (pushing together) and **tension** (pulling apart), plus **shear** (sideways). Twisting comes from `b2Joint_GetConstraintTorque`.
+  - **bonds to the streamer never snap.** The streamer is the foundation; losing balance is the main way to fail.
+- **Failure load: the masonry rule** *(your call: compression is super strong, so towers get big; refined in Phase 0)*:
+  - Each step, the bond's force (`b2Joint_GetConstraintForce`) is split along its axis into **compression** and **tension**, plus **shear**. Twist comes from `b2Joint_GetConstraintTorque`.
+  - The bond acts like a joint of some **width**: a single orb is about 0.25 m, and extra touches widen it.
+    - Twist turns into tension on one edge of the bond and compression on the other.
+    - **The weight pressing down on the bond cancels edge tension.** A bond only fails once the load shifts past its edge, like a stone column.
 
-    | Load | Breaking point | Why |
+    | Load | Breaking point | Effect |
     |---|---|---|
-    | **Compression** | **Super strong, effectively unbreakable** | Stacking straight up holds, so a well-stacked tower can get huge |
-    | **Tension** | Normal, the main way bonds fail | The far side of a lean gets pulled apart, as in World of Goo |
+    | **Compression** | **Effectively unbreakable** | Straight stacks never fail |
+    | **Edge tension** (from pulling or bending) | Normal, the main way bonds fail | Leans and overhangs fail once the load leaves the bond |
     | **Shear** | Medium | Sideways sliding at overhangs |
-    | **Twist** | Medium | Big overhanging people levering on one bond |
 
-  - **Stress** = the worst of (load ÷ breaking point) across the four, smoothed over a few frames so a one-frame spike doesn't break anything.
+  - Phase 0 tried four independent limits first. The bottom bond always snapped from twist around 7–10 m, because it carries the bending of everything above. The masonry rule fixed that while still breaking leans.
+  - **Stress** = the worst load ÷ breaking point, smoothed over a few frames so a one-frame spike doesn't break anything.
   - Over 100% for a short moment → **the bond snaps** (pop sound, goo splat).
   - **What this means for play:** straight stacks are nearly free. **Leaning, overhangs, and sideways hooks are where the risk is**, and that's exactly where the streamer's balancing and viewers' bracing matter.
+  - **Phase 4 tuning:** springy bonds wobble but can't hold very tall columns, and rigid ones break on impact. Current tuning tops out around 13–22 m.
 - **You can see the stress:**
   - Each bond is drawn as a small **goo blob** between the two limbs, tinted **green → yellow → red** by stress. It pulses when close to breaking.
   - Each person gets a **red tint** from their most-stressed bond, so you can read the whole tower's strain at a glance.
@@ -596,7 +612,7 @@ export default {
 |---|---|
 | ← / → | move (Shift = fine) |
 | Space | drop now |
-| J K L ; , + I O, or A S D F X + W E | extend limbs and neck, rotate the dropper in hotseat |
+| J K L ; , + U I O P, or A S D F X + Q W E R | stretch limbs and neck, rotate, drift the dropper in hotseat |
 | F1 | debug overlay |
 | F2 | toggle hotseat |
 | F3 | toggle bots |
@@ -969,20 +985,14 @@ Each phase ends with a check before the next one starts.
 
 **Stage 1: Chat Tower, playable on stream**
 
-0. **Physics head-to-head (headless, in Node).** Write the thin physics adapter, then run the same tests on **Box2D v3 (box2d3-wasm)** and **Planck.js**:
-   - **Tower:** the cart-and-pole streamer, plus 50 people welded one at a time. Each is dropped as a ragdoll and frozen into one body on first contact.
-     - **Sticky bonds** form when limbs touch while swaying.
-     - Stress is read every step and **split into compression, tension, shear, and twist**. Tension bonds snap and the disconnected people fall as debris.
-     - Then a collapse where they all turn back into ragdolls.
-     - Also check that a straight 50-person stack stands under compression, and a leaning one fails by tension, which is the behavior we want.
-   - **Truss:** about 150 pinned beams, with snapping based on constraint force (for Bridge Breakers later).
-   - **Determinism:** run the same input twice, and in Node vs. the browser. Positions must match exactly (Box2D v3 only).
-   - **Gate:** no NaN or blow-ups, wobble that looks right, under 4 ms per step with 50 people, and every adapter feature working. **Pick the winner, record why in `spikes/`.**
+0. **Physics head-to-head — ✅ done.** Box2D v3 chosen. Numbers, design findings, and risks are in [spikes/phase0/RESULTS.md](spikes/phase0/RESULTS.md).
+   - Built along the way: the physics adapter, both backends, the stress model, the new Person, and the tower, column, bridge, and determinism tests plus a viewer.
+   - 65 tests pass.
 1. **Scaffold.**
    - TypeScript monorepo (npm workspaces), Vite, Phaser 4 scene base, view list, camera, HUD, settings, the `protocol` package.
    - **The Electron shell from day one**, so the same build runs in both the app and a browser on the Mac. The browser-tab mode never has a Twitch login: simulated or anonymous chat only.
    - **Hardened from day one** (§14a items 1, 3, 7, 8): network allowlist, sandbox, fuses, CSP, no telemetry, pinned dependencies. Test: the allowlist blocks an arbitrary URL.
-2. **Person.** Ragdoll, freeze, unfreeze, pose, **limb extend/tuck + rotate**, and a test page.
+2. **Person.** Mostly done in Phase 0 (stumpy human with orbs, stretch, freeze/unfreeze, air control). Remaining: the Phaser renderer, skins hook, and a test page.
 3. **Chat.** Anonymous IRC **in the main process**, parsers, players table, commands with strict validation, sim, bots.
 4. **Chat Tower.** Full round loop, hotseat, chat poses, scoring, records.
 5. **Skins v1 + profiles.** Schema, catalog, chat commands, emote faces, presets, host save file.
@@ -1049,7 +1059,7 @@ Later, before advertising big rooms: fan-out shards and a 10k simulated-viewer l
 3. Price and model on Steam (paid, free, or free host with paid packs) → **decide later.** It affects who pays the relay costs.
 4. Global profiles and leaderboards across all streamers → **no for now** (needs a backend).
 5. Short domain for the website (something like `ftg.gg`) → **nice to have.** Jackbox's "go to jackbox.tv" is part of why it works.
-6. Player keys → **limbs and neck tucked by default; hold J K L ; , (or A S D F X) to extend each one, the last key being the neck; I/O (or W/E) to slowly rotate**, both layouts active, remappable. Streamer hotkeys on F-keys. *(Set by you.)*
+6. Player keys → **limbs and neck short by default; hold J K L ; , (or A S D F X) to stretch; I/O (W/E) rotate; U/P (Q/R) drift.** Both layouts active, remappable. Streamer hotkeys on F-keys. *(Set by you.)*
 7. Streamer's extra balance control (lean or crouch) → **no, left/right + Shift** until playtesting says otherwise.
 8. Website-player cap → **25 lobby players**, with full-rate live view only for the active and next player.
 9. Draw-your-own skins → **not now**; later with an approval queue.
@@ -1059,3 +1069,6 @@ Later, before advertising big rooms: fan-out shards and a 10k simulated-viewer l
 13. Bridge Breakers jackpot → **damage = bet back; collapse = bet + 50% of the pot, the other half seeds the next pot.** Confirm my reading.
 14. Build order after Chat Tower → **Bridge Breakers, then Fartman.**
 15. Fartman time worlds (Fart Incapacitor) → **yes, as late-game worlds**, with an original scientist character.
+16. **Should stretched limbs be solid once frozen in the tower**, so people can land on someone's outstretched arm, or stay drawn-only, with just the orbs and body colliding (World of Goo strands)? → **Drawn-only for now. Solid frozen limbs would add platforms for strategy, so worth trying in Phase 4.**
+17. **How tall should a good tower get?** Current tuning tops out around 13–22 m. → **Decide in Phase 4 playtesting.** The knobs are bond stiffness, tension limit, and bond width.
+18. **Node version** → your Mac has Node 23 (end of life). Recommend **Node 24 LTS** before Phase 1. Your call; I won't change it without asking.
