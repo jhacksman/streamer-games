@@ -3,13 +3,17 @@
 // sticky bonds when landed limbs touch -> direction-split stress -> snaps -> debris -> collapse.
 import type { BodyHandle, JointHandle, Physics, Vec2 } from '../../../packages/engine/src/physics/types.ts';
 import { StressTracker, type BondLimits, type StressMode } from '../../../packages/engine/src/physics/stress.ts';
+import { rotate, segmentDistance, toWorld } from '../../../packages/engine/src/physics/geometry.ts';
 import { Person, POSES, poseExtent, type PartTag, type Pose } from '../../../packages/engine/src/person/person.ts';
 import { mulberry32 } from './rng.ts';
 
 export const CAT = { GROUND: 0x1, TOWER: 0x2, FALLING: 0x4, DEBRIS: 0x8, CART: 0x10, STREAMER: 0x20 } as const;
+// The tower is one welded structure: its frozen members (and the streamer) don't collide with
+// each other. Overlapping frozen limbs otherwise fight their welds and snap bonds with huge
+// forces (Phase 0 finding). Touching members bond by proximity instead (processSticky).
 export const FILTERS = {
-  tower: { category: CAT.TOWER, mask: CAT.GROUND | CAT.TOWER | CAT.FALLING | CAT.DEBRIS | CAT.STREAMER },
-  streamer: { category: CAT.STREAMER, mask: CAT.TOWER | CAT.FALLING | CAT.DEBRIS },
+  tower: { category: CAT.TOWER, mask: CAT.GROUND | CAT.FALLING | CAT.DEBRIS },
+  streamer: { category: CAT.STREAMER, mask: CAT.FALLING | CAT.DEBRIS },
   falling: { category: CAT.FALLING, mask: CAT.GROUND | CAT.TOWER | CAT.DEBRIS | CAT.STREAMER },
   debris: { category: CAT.DEBRIS, mask: CAT.GROUND | CAT.TOWER | CAT.DEBRIS | CAT.FALLING | CAT.STREAMER },
 };
@@ -44,6 +48,12 @@ export interface TowerConfig {
   strongBase?: boolean;
   /** Bot air control: falling people drift toward the tower's summit (exercises Q/R, U/P). */
   aim?: boolean;
+  /** Force every random drop to this limb mask (e.g. 31 = all out, a spiky scaffold piece). */
+  limbs?: number;
+  /** Seconds before a pair whose bond snapped may bond again (stops snap/re-stick churn). */
+  rebondCooldown?: number;
+  /** How close (m) a sticky orb must come to another person to grab on. */
+  stickyRadius?: number;
 }
 
 type Role = 'streamer' | 'falling' | 'tower' | 'debris';
@@ -62,6 +72,11 @@ export interface Bond {
 
 /** Narrowest a bond can be (a single hand or foot), meters. */
 const MIN_BOND_WIDTH = 0.25;
+/** A bond keeps at most this many distinct contact points, at least this far apart. */
+const MAX_BOND_POINTS = 4;
+const BOND_POINT_SPACING = 0.15;
+/** Widest a bond can count as (meters). */
+const MAX_BOND_WIDTH = 0.9;
 
 export interface TowerMetrics {
   backend: string;
@@ -106,6 +121,8 @@ export class TowerSim {
   readonly cartJoint: JointHandle;
   readonly ankle: JointHandle;
   readonly metrics: TowerMetrics;
+  /** Fixed-base mode: the weld holding the streamer to the ground. */
+  groundWeld: JointHandle | null = null;
 
   time = 0;
   private nextDrop = 0.5;
@@ -114,6 +131,8 @@ export class TowerSim {
   private bondCount = new Map<number, number>();
   private debrisSince = new Map<number, number>();
   private lastDropX = 0;
+  /** Pair key -> sim time when that pair may bond again after a snap. */
+  private cooldownUntil = new Map<string, number>();
   /** Tuning diagnostics: sticky-bond candidates and why they were rejected, plus every snap. */
   readonly debug = { touchAdds: 0, rejectBonded: 0, rejectCap: 0, rejectSpeed: 0, snapLog: [] as unknown[] };
 
@@ -123,7 +142,7 @@ export class TowerSim {
       dt: 1 / 60, dropInterval: 1.4, dropHeight: 2.0, spread: 0.45, placement: 'random', leanStep: 0.18,
       base: 'fixed', sticky: true, maxBondsPerPerson: 4, bondSpeed: 0.8, limits: DEFAULT_LIMITS,
       weld: { angularHertz: 12, angularDamping: 0.7 }, collapseAngle: (55 * Math.PI) / 180, collapseHold: 0.4,
-      settleAfter: 4, debrisLifetime: 5, strongBase: true, aim: false,
+      settleAfter: 4, debrisLifetime: 5, strongBase: true, aim: false, limbs: -1, rebondCooldown: 2, stickyRadius: 0.04,
       ...cfg,
     };
     this.rng = mulberry32(this.cfg.seed);
@@ -155,7 +174,7 @@ export class TowerSim {
       // Fixed base: weld the streamer to the ground. (Pinning with huge motors injects energy
       // into Planck's solver, which made the comparison unfair.) The ankle is a stiff motorless
       // revolute so tilt still reads, but it carries nothing.
-      p.createWeld({ bodyA: this.ground, bodyB: this.streamer.body!, anchor: { x: 0, y: 0.05 } });
+      this.groundWeld = p.createWeld({ bodyA: this.ground, bodyB: this.streamer.body!, anchor: { x: 0, y: 0.05 } });
     }
     this.ankle = p.createRevolute({
       bodyA: this.cart, bodyB: this.streamer.body!, anchor: { x: 0, y: 0.05 },
@@ -207,7 +226,8 @@ export class TowerSim {
     if (this.cfg.placement === 'random') {
       x = this.topX() + (this.rng() * 2 - 1) * this.cfg.spread;
       angle = (this.rng() * 2 - 1) * 0.25;
-      limbs = Math.floor(this.rng() * 32);
+      const rolled = Math.floor(this.rng() * 32);
+      limbs = this.cfg.limbs >= 0 ? this.cfg.limbs : rolled;
     } else if (this.cfg.placement === 'straight') {
       // Directly onto the current top person: a vertical column.
       x = this.topX();
@@ -255,7 +275,8 @@ export class TowerSim {
     if (ba === null) return;
     const t = this.p.getTransform(ba);
     const local = rotate({ x: at.x - t.x, y: at.y - t.y }, -t.angle);
-    if (bond.points.some((q) => Math.hypot(q.x - local.x, q.y - local.y) < 0.05)) return;
+    if (bond.points.length >= MAX_BOND_POINTS) return;
+    if (bond.points.some((q) => Math.hypot(q.x - local.x, q.y - local.y) < BOND_POINT_SPACING)) return;
     bond.points.push(local);
     let w = MIN_BOND_WIDTH;
     for (let i = 0; i < bond.points.length; i++) {
@@ -265,8 +286,8 @@ export class TowerSim {
         w = Math.max(w, Math.hypot(pi.x - pj.x, pi.y - pj.y) + MIN_BOND_WIDTH);
       }
     }
-    bond.width = w;
-    this.stress.setWidth(bond.joint, w);
+    bond.width = Math.min(MAX_BOND_WIDTH, w);
+    this.stress.setWidth(bond.joint, bond.width);
   }
 
   private addBond(a: number, b: number, anchor: Vec2, kind: Bond['kind']) {
@@ -395,13 +416,14 @@ export class TowerSim {
       if (!c) caps.set(q.id, (c = this.capsules(q)));
       return c;
     };
-    const GAP = 0.04;
+    const GAP = this.cfg.stickyRadius;
     for (let i = 0; i < landed.length; i++) {
       for (let j = i + 1; j < landed.length; j++) {
         const A = landed[i]!;
         const B = landed[j]!;
         if (Math.hypot(centers[i]!.x - centers[j]!.x, centers[i]!.y - centers[j]!.y) > 2.6) continue;
         const existing = this.bonds.find((x) => x.key === this.pairKey(A.id, B.id));
+        if (!existing && (this.cooldownUntil.get(this.pairKey(A.id, B.id)) ?? 0) > this.time) continue;
         if (!existing) {
           const capA = A.id === STREAMER_ID ? Infinity : this.cfg.maxBondsPerPerson;
           const capB = B.id === STREAMER_ID ? Infinity : this.cfg.maxBondsPerPerson;
@@ -445,6 +467,7 @@ export class TowerSim {
       this.p.destroyJoint(s.joint);
       this.stress.remove(s.joint);
       this.bonds.splice(i, 1);
+      this.cooldownUntil.set(bond.key, this.time + this.cfg.rebondCooldown);
       this.bondCount.set(bond.a, (this.bondCount.get(bond.a) ?? 1) - 1);
       this.bondCount.set(bond.b, (this.bondCount.get(bond.b) ?? 1) - 1);
       this.metrics.snaps.push({ mode: s.reading.governing, ratio: s.reading.ratio });
@@ -630,55 +653,6 @@ export class TowerSim {
     parts.push(ct.x, ct.y, ct.angle);
     return fnv1a(new Float64Array(parts));
   }
-}
-
-function rotate(v: Vec2, a: number): Vec2 {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  return { x: c * v.x - s * v.y, y: s * v.x + c * v.y };
-}
-
-function toWorld(t: { x: number; y: number; angle: number }, v: Vec2): Vec2 {
-  const r = rotate(v, t.angle);
-  return { x: t.x + r.x, y: t.y + r.y };
-}
-
-/** Closest points between segments p1-q1 and p2-q2 (Ericson, Real-Time Collision Detection 5.1.9). */
-function segmentDistance(p1: Vec2, q1: Vec2, p2: Vec2, q2: Vec2): { dist: number; p: Vec2; q: Vec2 } {
-  const d1 = { x: q1.x - p1.x, y: q1.y - p1.y };
-  const d2 = { x: q2.x - p2.x, y: q2.y - p2.y };
-  const r = { x: p1.x - p2.x, y: p1.y - p2.y };
-  const a = d1.x * d1.x + d1.y * d1.y;
-  const e = d2.x * d2.x + d2.y * d2.y;
-  const f = d2.x * r.x + d2.y * r.y;
-  const clamp = (v: number) => Math.max(0, Math.min(1, v));
-  let s = 0;
-  let t = 0;
-  if (a <= 1e-9 && e <= 1e-9) {
-    s = t = 0;
-  } else if (a <= 1e-9) {
-    t = clamp(f / e);
-  } else {
-    const c = d1.x * r.x + d1.y * r.y;
-    if (e <= 1e-9) {
-      s = clamp(-c / a);
-    } else {
-      const b = d1.x * d2.x + d1.y * d2.y;
-      const denom = a * e - b * b;
-      s = denom > 1e-9 ? clamp((b * f - c * e) / denom) : 0;
-      t = (b * s + f) / e;
-      if (t < 0) {
-        t = 0;
-        s = clamp(-c / a);
-      } else if (t > 1) {
-        t = 1;
-        s = clamp((b - c) / a);
-      }
-    }
-  }
-  const p = { x: p1.x + d1.x * s, y: p1.y + d1.y * s };
-  const q = { x: p2.x + d2.x * t, y: p2.y + d2.y * t };
-  return { dist: Math.hypot(p.x - q.x, p.y - q.y), p, q };
 }
 
 function midpoint(a: Vec2, b: Vec2): Vec2 {

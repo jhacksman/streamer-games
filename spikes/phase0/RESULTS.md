@@ -3,7 +3,7 @@
 **Winner: Box2D v3 (box2d3-wasm 5.2.0, Box2D v3.2). Planck.js stays in the adapter as a fallback.**
 
 Reproduce with `npm run phase0`, which writes `results.json`. Regression gates live in `test/phase0.test.ts` (`npm test`).
-Measured on an Apple Silicon Mac, Node 23.11, single-threaded.
+Measured on an Apple Silicon Mac, single-threaded. First run on Node 23.11; re-run on **Node 26.11** after the solid-limbs change (`results.json` holds the latest).
 
 ## Gate
 
@@ -77,3 +77,38 @@ Measured on an Apple Silicon Mac, Node 23.11, single-threaded.
   - `src/determinism.ts`
   - `src/run.ts`
   - `viewer/`: live view, showcase (`?mode=showcase`), and determinism check (`?mode=determinism`)
+
+## Addendum: solid limbs, Node 26, and a box2d3-wasm bug (2026-10-09)
+
+**Solid limbs (your call).** Every limb is now a solid beam, so stretched people are scaffolding others land on and stick to.
+- While live, each beam rides on its orb and is rebuilt as the limb stretches.
+- When frozen, beams are baked into the compound body.
+- A falling person's limb hitting the tower counts as the landing.
+
+The upgrade surfaced four things:
+
+1. **box2d3-wasm bug: zero-density shapes could zero a body's rotational inertia.**
+   - Symptom: a frozen person spun at a constant rate forever, dragging the streamer over.
+   - Cause: Box2D then treats a body like that as unrotatable, so no weld can stop it.
+   - It only happened after the world had been stepped. The first zero-density beam added to the new body made its inertia exactly 0, while mass stayed correct.
+   - **Fix:** limb beams use density 0.001 instead of 0 (still effectively weightless).
+   - A regression test covers it.
+   - Worth reporting upstream (I haven't, since posting publicly needs your OK).
+2. **The same bug caused run-to-run drift.** For a while, worlds sharing one WASM instance didn't repeat. With the fix, shared-instance runs repeat exactly again. Each world still gets a fresh WASM instance by default (about 10 ms) as insurance.
+3. **Frozen tower members no longer collide with each other (or with the streamer).** Overlapping frozen limbs fought their welds and snapped bonds with forces up to millions of newtons. Touching members bond by proximity instead. Falling people and debris still collide with everything.
+4. **Springy bonds in closed loops fight each other.** A bond remembers its angle when it forms, so when a loop closes around a bond that has flexed, the springs pull against each other permanently (about 100,000 N at 12 Hz).
+   - A 2 s re-stick cooldown after a snap stops snap/re-stick churn.
+   - **Rigid bonds build much taller towers:**
+
+     | | Spiky drops | Random drops |
+     |---|---|---|
+     | Box2D, rigid | 42.1 m (22 people) | 24.4 m |
+     | Planck, rigid | 26.3 m | 27.0 m |
+     | Box2D, springy (12 Hz) | 18.5 m | 12.7 m |
+     | Planck, springy (12 Hz) | 17.6 m | 12.3 m |
+
+   - **Wobble vs. height is the big Phase 4 tuning call.**
+
+**Sticky bonds between new pairs are rare** with the summit-aiming test bot, which always lands on exactly one person. A sticky radius (`stickyRadius`) is now tunable. Real players aiming into gaps between two people should trigger it; tune in Phase 4.
+
+**Frame-time watch.** With 11 shapes per person, the sticky scan costs more. The worst case (a 50-person pile, everything sticky) hit a 3.3 ms p95 whole frame on Box2D, still under 4 ms. Phase 1: spatial hash plus batched transform reads.

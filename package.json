@@ -13,7 +13,7 @@
     "phase0:viewer": "vite spikes/phase0/viewer"
   },
   "engines": {
-    "node": ">=22.12"
+    "node": ">=24"
   },
   "dependencies": {
     "box2d3-wasm": "5.2.0",

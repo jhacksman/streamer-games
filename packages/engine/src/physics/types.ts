@@ -159,6 +159,8 @@ export interface Physics {
   bodyExists(body: BodyHandle): boolean;
   bodyTag(body: BodyHandle): unknown;
   addShape(body: BodyHandle, geom: ShapeGeom, opts?: ShapeOpts): ShapeHandle;
+  /** Remove one shape from its body (the body's mass updates). */
+  removeShape(shape: ShapeHandle): void;
   /** JS-side record of a shape (geometry is in the body's local frame). */
   shape(shape: ShapeHandle): ShapeRecord | undefined;
   bodyShapes(body: BodyHandle): readonly ShapeHandle[];

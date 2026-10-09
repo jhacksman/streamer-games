@@ -200,7 +200,7 @@ Sources:
 | Streamer login | **Twitch device code flow**: the app opens twitch.tv/activate in the streamer's browser **with the code pre-filled** | Made for desktop apps. No client secret, no server. |
 | Viewer login | **Twitch OIDC implicit flow** on the website | Returns an ID token **signed by Twitch** (user ID + username). **The relay checks it** and passes only verified identities to the host. |
 | Host ↔ viewers | **Relay: a Node.js (TypeScript) WebSocket server on our Linux server**, behind **Cloudflare's free proxy** | Both sides connect **out** to the relay, so the host's IP is never exposed. The proxy hides the relay server's IP too and absorbs DDoS. Works on every network. The streamer uploads each update once. Shares message types with the host and website. Scales from 100 to 10k+. |
-| Dev and targets | Develop on **Mac**. Ship Steam builds for **Windows** (most Steam players) and Mac, Linux optional. The relay runs on **Linux**. | Electron packages Windows builds from a Mac. **Test on a real Windows PC before launch.** |
+| Dev and targets | Develop on **Mac, Node 26** (upgraded from 23; `.nvmrc`, `engines >=24`). Ship Steam builds for **Windows** (most Steam players) and Mac, Linux optional. The relay runs on **Linux**. | Electron packages Windows builds from a Mac. **Test on a real Windows PC before launch.** |
 | Tests | **Vitest** plus headless physics tests in Node | Both physics engines run in Node. |
 
 **Why Box2D v3.** It's Erin Catto's 2024 ground-up rewrite of Box2D. I checked these names in its headers:
@@ -467,7 +467,7 @@ export default {
   Its **head, hands, and feet are round sticky orbs**, World of Goo style.
 - **The physics:** one **body** plus **five orbs** (head, two hands, two feet). Each orb rides a **stretch (prismatic) joint** along a fixed direction from the body: neck up, arms out, legs down.
   - That's **6 bodies and 5 joints**, down from 11 and 10.
-  - The limbs themselves are drawn, not simulated. Only the body and the orbs collide.
+  - **Limbs are solid scaffolding** *(your call)*: each is a solid, effectively weightless beam from the body to its orb. Stretched people are spiky pieces others land on and stick to. While falling, a limb hitting the tower counts as the landing.
 - **Short until pressed:** every limb and the neck are **short stubs by default**. **Hold the key and that one stretches out**, about 5× longer for arms. Release and it pulls back in. The stretch is motor-driven and force-capped, so it has a little give.
 - **Shapes:** four limbs plus the neck give **32 shapes**, and freezing on contact locks in whichever you're holding. Strategy is choosing the shape and timing the landing.
 - **Air control while hanging or falling:**
@@ -554,7 +554,9 @@ export default {
 
 - **Bonds form on touch.**
   - When a **sticky orb** (head, hand, foot) of one landed person touches another landed person, a **soft weld (bond)** forms there.
-  - Touches are found geometrically every 0.1 s (orbs as circles, the body as a capsule). Bonded pairs don't collide, because a weld locked onto an overlap fights the contact solver (Phase 0 finding).
+  - Touches are found geometrically every 0.1 s (orbs as circles, bodies and limbs as capsules), within a tunable **sticky radius**.
+  - **Frozen tower members (and the streamer) don't collide with each other.** The tower is one welded structure, and overlapping frozen limbs fought their welds (Phase 0 finding). Falling people and debris still collide with everything.
+  - After a bond snaps, that pair can't re-stick for about 2 s, so bonds don't snap, re-stick, and snap again.
   - Body-to-body contact just collides.
 - **Limits, so it stays a wobbly web and not one rigid blob:**
   - **one bond (one weld) per pair of people.** More touches between the same pair **widen** that bond instead of adding a weld; two welds between the same pair fight each other.
@@ -577,7 +579,7 @@ export default {
   - **Stress** = the worst load ÷ breaking point, smoothed over a few frames so a one-frame spike doesn't break anything.
   - Over 100% for a short moment → **the bond snaps** (pop sound, goo splat).
   - **What this means for play:** straight stacks are nearly free. **Leaning, overhangs, and sideways hooks are where the risk is**, and that's exactly where the streamer's balancing and viewers' bracing matter.
-  - **Phase 4 tuning:** springy bonds wobble but can't hold very tall columns, and rigid ones break on impact. Current tuning tops out around 13–22 m.
+  - **Phase 4 tuning, the big call: wobble vs. height.** Springy bonds wobble but fight each other in closed loops. Rigid bonds built 24–42 m towers in Phase 0 versus 12–18 m springy. Options: rigid bonds with the wobble coming from the streamer's balance, or a medium stiffness.
 - **You can see the stress:**
   - Each bond is drawn as a small **goo blob** between the two limbs, tinted **green → yellow → red** by stress. It pulses when close to breaking.
   - Each person gets a **red tint** from their most-stressed bond, so you can read the whole tower's strain at a glance.
@@ -1069,6 +1071,7 @@ Later, before advertising big rooms: fan-out shards and a 10k simulated-viewer l
 13. Bridge Breakers jackpot → **damage = bet back; collapse = bet + 50% of the pot, the other half seeds the next pot.** Confirm my reading.
 14. Build order after Chat Tower → **Bridge Breakers, then Fartman.**
 15. Fartman time worlds (Fart Incapacitor) → **yes, as late-game worlds**, with an original scientist character.
-16. **Should stretched limbs be solid once frozen in the tower**, so people can land on someone's outstretched arm, or stay drawn-only, with just the orbs and body colliding (World of Goo strands)? → **Drawn-only for now. Solid frozen limbs would add platforms for strategy, so worth trying in Phase 4.**
+16. ~~Solid limbs?~~ → **Yes: every limb is solid scaffolding**, live and frozen. *(Decided by you; built.)*
 17. **How tall should a good tower get?** Current tuning tops out around 13–22 m. → **Decide in Phase 4 playtesting.** The knobs are bond stiffness, tension limit, and bond width.
-18. **Node version** → your Mac has Node 23 (end of life). Recommend **Node 24 LTS** before Phase 1. Your call; I won't change it without asking.
+18. ~~Node version~~ → **Upgraded to Node 26.11** (Homebrew). *(Decided by you; done.)*
+19. **Report the box2d3-wasm zero-density bug upstream?** → **Recommended**, with a minimal repro. It's public, so it needs your OK.

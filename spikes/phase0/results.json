@@ -1,23 +1,23 @@
 {
   "planck": {
     "tower_random": {
-      "landed": 33,
-      "missed": 17,
-      "towerPeopleEnd": 7,
-      "peakPeople": 11,
+      "landed": 47,
+      "missed": 3,
+      "towerPeopleEnd": 5,
+      "peakPeople": 8,
       "sticky": 0,
       "snaps": {
-        "twist": 4
+        "twist": 8
       },
-      "detached": 26,
+      "detached": 42,
       "collapsed": false,
-      "maxHeight": 13.245,
+      "maxHeight": 13.237,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.025,
-      "stepP95Ms": 0.044,
-      "frameAvgMs": 0.045,
-      "frameP95Ms": 0.129
+      "stepAvgMs": 0.05,
+      "stepP95Ms": 0.147,
+      "frameAvgMs": 0.076,
+      "frameP95Ms": 0.19
     },
     "tower_straight": {
       "landed": 45,
@@ -30,68 +30,68 @@
       },
       "detached": 40,
       "collapsed": false,
-      "maxHeight": 18.774,
+      "maxHeight": 18.822,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.024,
-      "stepP95Ms": 0.042,
-      "frameAvgMs": 0.038,
-      "frameP95Ms": 0.092
+      "stepAvgMs": 0.025,
+      "stepP95Ms": 0.046,
+      "frameAvgMs": 0.05,
+      "frameP95Ms": 0.148
     },
     "tower_lean": {
-      "landed": 42,
-      "missed": 8,
-      "towerPeopleEnd": 7,
-      "peakPeople": 11,
+      "landed": 47,
+      "missed": 3,
+      "towerPeopleEnd": 4,
+      "peakPeople": 10,
       "sticky": 0,
       "snaps": {
         "twist": 5
       },
-      "detached": 35,
+      "detached": 43,
       "collapsed": false,
-      "maxHeight": 22.394,
+      "maxHeight": 18.98,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.028,
-      "stepP95Ms": 0.059,
-      "frameAvgMs": 0.044,
-      "frameP95Ms": 0.114
+      "stepAvgMs": 0.025,
+      "stepP95Ms": 0.047,
+      "frameAvgMs": 0.051,
+      "frameP95Ms": 0.155
     },
     "tower_balanced": {
-      "landed": 20,
-      "missed": 30,
-      "towerPeopleEnd": 6,
-      "peakPeople": 10,
+      "landed": 23,
+      "missed": 27,
+      "towerPeopleEnd": 7,
+      "peakPeople": 11,
       "sticky": 3,
       "snaps": {
-        "twist": 5
+        "twist": 4
       },
-      "detached": 14,
+      "detached": 16,
       "collapsed": false,
-      "maxHeight": 12.777,
+      "maxHeight": 12.076,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.073,
-      "stepP95Ms": 0.144,
-      "frameAvgMs": 0.095,
-      "frameP95Ms": 0.197
+      "stepAvgMs": 0.083,
+      "stepP95Ms": 0.216,
+      "frameAvgMs": 0.132,
+      "frameP95Ms": 0.363
     },
     "pile50_unbreakable": {
       "landed": 50,
       "missed": 0,
       "towerPeopleEnd": 50,
       "peakPeople": 50,
-      "sticky": 21,
+      "sticky": 50,
       "snaps": {},
       "detached": 0,
       "collapsed": false,
-      "maxHeight": 18.378,
+      "maxHeight": 17.091,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.166,
-      "stepP95Ms": 0.224,
-      "frameAvgMs": 0.342,
-      "frameP95Ms": 1.091
+      "stepAvgMs": 0.191,
+      "stepP95Ms": 0.249,
+      "frameAvgMs": 0.548,
+      "frameP95Ms": 2.07
     },
     "column50_straight_rigid": {
       "standing": 50,
@@ -101,8 +101,8 @@
       "expectedCompression": 33641,
       "topSag": 0.033,
       "nan": false,
-      "stepAvgMs": 0.085,
-      "stepP95Ms": 0.137
+      "stepAvgMs": 0.089,
+      "stepP95Ms": 0.146
     },
     "column50_straight_soft12hz": {
       "standing": 2,
@@ -112,8 +112,8 @@
       "expectedCompression": 33641,
       "topSag": 16.12,
       "nan": false,
-      "stepAvgMs": 0.109,
-      "stepP95Ms": 0.208
+      "stepAvgMs": 0.137,
+      "stepP95Ms": 0.34
     },
     "column50_lean12cm": {
       "standing": 1,
@@ -121,10 +121,10 @@
       "snaps": 33,
       "bottomCompression": null,
       "expectedCompression": 33641,
-      "topSag": 99.792,
+      "topSag": 100.358,
       "nan": false,
-      "stepAvgMs": 0.186,
-      "stepP95Ms": 0.286
+      "stepAvgMs": 0.343,
+      "stepP95Ms": 0.677
     },
     "column100_straight_rigid": {
       "standing": 100,
@@ -134,8 +134,8 @@
       "expectedCompression": 67283,
       "topSag": 0.213,
       "nan": false,
-      "stepAvgMs": 0.276,
-      "stepP95Ms": 0.396
+      "stepAvgMs": 0.335,
+      "stepP95Ms": 0.515
     },
     "truss_car": {
       "beams": 157,
@@ -144,8 +144,8 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.528,
-      "stepP95Ms": 0.651
+      "stepAvgMs": 0.379,
+      "stepP95Ms": 0.474
     },
     "truss_anvil2t": {
       "beams": 157,
@@ -154,8 +154,8 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.511,
-      "stepP95Ms": 0.626
+      "stepAvgMs": 0.342,
+      "stepP95Ms": 0.405
     },
     "truss_anvil40t": {
       "beams": 157,
@@ -164,107 +164,107 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.604,
-      "stepP95Ms": 0.777
+      "stepAvgMs": 0.416,
+      "stepP95Ms": 0.528
     },
     "determinism": {
-      "run1": "39b03102:110",
-      "run2": "39b03102:110"
+      "run1": "76e61b89:38",
+      "run2": "76e61b89:38"
     }
   },
   "box2d3-compat": {
     "tower_random": {
-      "landed": 44,
-      "missed": 6,
-      "towerPeopleEnd": 8,
-      "peakPeople": 12,
-      "sticky": 3,
+      "landed": 42,
+      "missed": 8,
+      "towerPeopleEnd": 3,
+      "peakPeople": 9,
+      "sticky": 0,
       "snaps": {
         "twist": 8
       },
-      "detached": 36,
+      "detached": 39,
       "collapsed": false,
-      "maxHeight": 12.798,
+      "maxHeight": 12.756,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.015,
-      "stepP95Ms": 0.026,
-      "frameAvgMs": 0.121,
-      "frameP95Ms": 0.297
+      "stepAvgMs": 0.013,
+      "stepP95Ms": 0.029,
+      "frameAvgMs": 0.125,
+      "frameP95Ms": 0.308
     },
     "tower_straight": {
       "landed": 46,
       "missed": 4,
-      "towerPeopleEnd": 2,
-      "peakPeople": 11,
+      "towerPeopleEnd": 5,
+      "peakPeople": 14,
       "sticky": 0,
       "snaps": {
-        "twist": 7
-      },
-      "detached": 44,
-      "collapsed": false,
-      "maxHeight": 21.866,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.011,
-      "stepP95Ms": 0.016,
-      "frameAvgMs": 0.096,
-      "frameP95Ms": 0.22
-    },
-    "tower_lean": {
-      "landed": 47,
-      "missed": 3,
-      "towerPeopleEnd": 6,
-      "peakPeople": 12,
-      "sticky": 5,
-      "snaps": {
-        "twist": 6
+        "twist": 5
       },
       "detached": 41,
       "collapsed": false,
-      "maxHeight": 17.143,
+      "maxHeight": 27.468,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.012,
-      "stepP95Ms": 0.019,
-      "frameAvgMs": 0.105,
-      "frameP95Ms": 0.251
+      "stepAvgMs": 0.016,
+      "stepP95Ms": 0.029,
+      "frameAvgMs": 0.229,
+      "frameP95Ms": 0.529
+    },
+    "tower_lean": {
+      "landed": 44,
+      "missed": 6,
+      "towerPeopleEnd": 3,
+      "peakPeople": 9,
+      "sticky": 1,
+      "snaps": {
+        "twist": 7
+      },
+      "detached": 41,
+      "collapsed": false,
+      "maxHeight": 18.078,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.017,
+      "stepP95Ms": 0.038,
+      "frameAvgMs": 0.159,
+      "frameP95Ms": 0.366
     },
     "tower_balanced": {
-      "landed": 7,
-      "missed": 21,
-      "towerPeopleEnd": 0,
-      "peakPeople": 7,
-      "sticky": 0,
+      "landed": 21,
+      "missed": 29,
+      "towerPeopleEnd": 7,
+      "peakPeople": 10,
+      "sticky": 1,
       "snaps": {
-        "twist": 1
+        "twist": 3
       },
-      "detached": 1,
-      "collapsed": true,
-      "maxHeight": 9.42,
+      "detached": 14,
+      "collapsed": false,
+      "maxHeight": 12.393,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.015,
-      "stepP95Ms": 0.023,
-      "frameAvgMs": 0.067,
-      "frameP95Ms": 0.142
+      "stepAvgMs": 0.013,
+      "stepP95Ms": 0.02,
+      "frameAvgMs": 0.184,
+      "frameP95Ms": 0.425
     },
     "pile50_unbreakable": {
       "landed": 50,
       "missed": 0,
       "towerPeopleEnd": 50,
       "peakPeople": 50,
-      "sticky": 15,
+      "sticky": 49,
       "snaps": {},
       "detached": 0,
       "collapsed": false,
-      "maxHeight": 16.001,
+      "maxHeight": 14.57,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.036,
-      "stepP95Ms": 0.059,
-      "frameAvgMs": 0.664,
-      "frameP95Ms": 1.776
+      "stepAvgMs": 0.029,
+      "stepP95Ms": 0.047,
+      "frameAvgMs": 1.247,
+      "frameP95Ms": 3.3
     },
     "column50_straight_rigid": {
       "standing": 50,
@@ -274,41 +274,41 @@
       "expectedCompression": 33641,
       "topSag": 0.171,
       "nan": false,
-      "stepAvgMs": 0.014,
-      "stepP95Ms": 0.024
+      "stepAvgMs": 0.015,
+      "stepP95Ms": 0.032
     },
     "column50_straight_soft12hz": {
       "standing": 4,
       "of": 50,
       "snaps": 0,
-      "bottomCompression": 4707,
+      "bottomCompression": 4736,
       "expectedCompression": 33641,
-      "topSag": 16.127,
+      "topSag": 16.124,
       "nan": false,
-      "stepAvgMs": 0.025,
-      "stepP95Ms": 0.055
+      "stepAvgMs": 0.037,
+      "stepP95Ms": 0.119
     },
     "column50_lean12cm": {
       "standing": 1,
       "of": 50,
-      "snaps": 37,
+      "snaps": 39,
       "bottomCompression": null,
       "expectedCompression": 33641,
-      "topSag": 100.343,
+      "topSag": 100.104,
       "nan": false,
-      "stepAvgMs": 0.057,
-      "stepP95Ms": 0.087
+      "stepAvgMs": 0.107,
+      "stepP95Ms": 0.177
     },
     "column100_straight_rigid": {
       "standing": 100,
       "of": 100,
       "snaps": 0,
-      "bottomCompression": 74779,
+      "bottomCompression": 74781,
       "expectedCompression": 67283,
       "topSag": 0.811,
       "nan": false,
-      "stepAvgMs": 0.044,
-      "stepP95Ms": 0.066
+      "stepAvgMs": 0.069,
+      "stepP95Ms": 0.123
     },
     "truss_car": {
       "beams": 157,
@@ -317,8 +317,8 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.073,
-      "stepP95Ms": 0.088
+      "stepAvgMs": 0.067,
+      "stepP95Ms": 0.081
     },
     "truss_anvil2t": {
       "beams": 157,
@@ -327,8 +327,8 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.075,
-      "stepP95Ms": 0.094
+      "stepAvgMs": 0.069,
+      "stepP95Ms": 0.082
     },
     "truss_anvil40t": {
       "beams": 157,
@@ -337,107 +337,107 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.057,
-      "stepP95Ms": 0.091
+      "stepAvgMs": 0.052,
+      "stepP95Ms": 0.083
     },
     "determinism": {
-      "run1": "5bfb8041:91",
-      "run2": "5bfb8041:91"
+      "run1": "5c300353:72",
+      "run2": "5c300353:72"
     }
   },
   "box2d3-deluxe": {
     "tower_random": {
-      "landed": 44,
-      "missed": 6,
-      "towerPeopleEnd": 8,
-      "peakPeople": 12,
-      "sticky": 3,
+      "landed": 42,
+      "missed": 8,
+      "towerPeopleEnd": 3,
+      "peakPeople": 9,
+      "sticky": 0,
       "snaps": {
         "twist": 8
       },
-      "detached": 36,
+      "detached": 39,
       "collapsed": false,
-      "maxHeight": 12.798,
+      "maxHeight": 12.756,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.016,
-      "stepP95Ms": 0.028,
-      "frameAvgMs": 0.127,
-      "frameP95Ms": 0.294
+      "stepAvgMs": 0.015,
+      "stepP95Ms": 0.029,
+      "frameAvgMs": 0.141,
+      "frameP95Ms": 0.334
     },
     "tower_straight": {
       "landed": 46,
       "missed": 4,
-      "towerPeopleEnd": 2,
-      "peakPeople": 11,
+      "towerPeopleEnd": 5,
+      "peakPeople": 14,
       "sticky": 0,
       "snaps": {
-        "twist": 7
-      },
-      "detached": 44,
-      "collapsed": false,
-      "maxHeight": 21.866,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.012,
-      "stepP95Ms": 0.019,
-      "frameAvgMs": 0.104,
-      "frameP95Ms": 0.229
-    },
-    "tower_lean": {
-      "landed": 47,
-      "missed": 3,
-      "towerPeopleEnd": 6,
-      "peakPeople": 12,
-      "sticky": 5,
-      "snaps": {
-        "twist": 6
+        "twist": 5
       },
       "detached": 41,
       "collapsed": false,
-      "maxHeight": 17.143,
+      "maxHeight": 27.468,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.018,
+      "stepP95Ms": 0.029,
+      "frameAvgMs": 0.248,
+      "frameP95Ms": 0.556
+    },
+    "tower_lean": {
+      "landed": 44,
+      "missed": 6,
+      "towerPeopleEnd": 3,
+      "peakPeople": 9,
+      "sticky": 1,
+      "snaps": {
+        "twist": 7
+      },
+      "detached": 41,
+      "collapsed": false,
+      "maxHeight": 18.078,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.019,
+      "stepP95Ms": 0.04,
+      "frameAvgMs": 0.166,
+      "frameP95Ms": 0.378
+    },
+    "tower_balanced": {
+      "landed": 21,
+      "missed": 29,
+      "towerPeopleEnd": 7,
+      "peakPeople": 10,
+      "sticky": 1,
+      "snaps": {
+        "twist": 3
+      },
+      "detached": 14,
+      "collapsed": false,
+      "maxHeight": 12.393,
       "nan": false,
       "blowup": false,
       "stepAvgMs": 0.014,
       "stepP95Ms": 0.021,
-      "frameAvgMs": 0.116,
-      "frameP95Ms": 0.262
-    },
-    "tower_balanced": {
-      "landed": 7,
-      "missed": 21,
-      "towerPeopleEnd": 0,
-      "peakPeople": 7,
-      "sticky": 0,
-      "snaps": {
-        "twist": 1
-      },
-      "detached": 1,
-      "collapsed": true,
-      "maxHeight": 9.42,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.016,
-      "stepP95Ms": 0.025,
-      "frameAvgMs": 0.073,
-      "frameP95Ms": 0.152
+      "frameAvgMs": 0.192,
+      "frameP95Ms": 0.437
     },
     "pile50_unbreakable": {
       "landed": 50,
       "missed": 0,
       "towerPeopleEnd": 50,
       "peakPeople": 50,
-      "sticky": 15,
+      "sticky": 49,
       "snaps": {},
       "detached": 0,
       "collapsed": false,
-      "maxHeight": 16.001,
+      "maxHeight": 14.57,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.034,
-      "stepP95Ms": 0.043,
-      "frameAvgMs": 0.654,
-      "frameP95Ms": 1.725
+      "stepAvgMs": 0.032,
+      "stepP95Ms": 0.049,
+      "frameAvgMs": 1.287,
+      "frameP95Ms": 3.348
     },
     "column50_straight_rigid": {
       "standing": 50,
@@ -447,41 +447,41 @@
       "expectedCompression": 33641,
       "topSag": 0.171,
       "nan": false,
-      "stepAvgMs": 0.015,
-      "stepP95Ms": 0.026
+      "stepAvgMs": 0.017,
+      "stepP95Ms": 0.036
     },
     "column50_straight_soft12hz": {
       "standing": 4,
       "of": 50,
       "snaps": 0,
-      "bottomCompression": 4707,
+      "bottomCompression": 4736,
       "expectedCompression": 33641,
-      "topSag": 16.127,
+      "topSag": 16.124,
       "nan": false,
-      "stepAvgMs": 0.026,
-      "stepP95Ms": 0.055
+      "stepAvgMs": 0.039,
+      "stepP95Ms": 0.123
     },
     "column50_lean12cm": {
       "standing": 1,
       "of": 50,
-      "snaps": 37,
+      "snaps": 39,
       "bottomCompression": null,
       "expectedCompression": 33641,
-      "topSag": 100.343,
+      "topSag": 100.104,
       "nan": false,
-      "stepAvgMs": 0.055,
-      "stepP95Ms": 0.084
+      "stepAvgMs": 0.103,
+      "stepP95Ms": 0.165
     },
     "column100_straight_rigid": {
       "standing": 100,
       "of": 100,
       "snaps": 0,
-      "bottomCompression": 74779,
+      "bottomCompression": 74781,
       "expectedCompression": 67283,
       "topSag": 0.811,
       "nan": false,
-      "stepAvgMs": 0.047,
-      "stepP95Ms": 0.068
+      "stepAvgMs": 0.071,
+      "stepP95Ms": 0.128
     },
     "truss_car": {
       "beams": 157,
@@ -490,8 +490,8 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.075,
-      "stepP95Ms": 0.092
+      "stepAvgMs": 0.07,
+      "stepP95Ms": 0.082
     },
     "truss_anvil2t": {
       "beams": 157,
@@ -500,7 +500,7 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.076,
+      "stepAvgMs": 0.074,
       "stepP95Ms": 0.091
     },
     "truss_anvil40t": {
@@ -510,17 +510,17 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.058,
-      "stepP95Ms": 0.092
+      "stepAvgMs": 0.055,
+      "stepP95Ms": 0.088
     },
     "determinism": {
-      "run1": "5bfb8041:91",
-      "run2": "5bfb8041:91"
+      "run1": "5c300353:72",
+      "run2": "5c300353:72"
     }
   },
   "meta": {
-    "node": "v23.11.0",
+    "node": "v26.11.0",
     "platform": "darwin arm64",
-    "date": "2026-10-09T03:56:06.580Z"
+    "date": "2026-10-09T09:58:16.708Z"
   }
 }
