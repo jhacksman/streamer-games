@@ -190,13 +190,13 @@ Sources:
 
 | Choice | Pick | Why |
 |---|---|---|
-| Host app | **Electron** wrapping the same web code, with **steamworks.js** for Steam (Cloud saves, achievements, overlay) | **One codebase** for the Steam game and the viewer website. Viewers' live view uses the exact same renderer. Electron is a normal way to ship web-tech games on Steam. During development the host also runs in a plain browser tab. |
+| Host app | **Electron** wrapping the same web code, with **steamworks.js** for Steam (Cloud saves, achievements, overlay) | **One codebase** for the Steam game and the viewer website. Viewers' live view uses the exact same renderer. Electron is a normal way to ship web-tech games on Steam. During development the host also runs in a plain browser tab, **with no Twitch login there**: simulated chat and anonymous chat reading only, so tokens never live in a web page. |
 | Language | **TypeScript everywhere**: host app, viewer website, relay | Shared message and skin types across all three. Fewer mismatch bugs, and the language AI coding sessions handle best. |
 | Game framework | **Phaser 4** (4.2.1, July 2026; WebGL) | Scenes, input, audio, cameras, particles, text, asset loading, and **Tiled map loading** for Fartman. Runs the same in Electron and phone browsers. |
 | Physics | **Box2D v3** via **box2d3-wasm** (WASM + SIMD), with **Planck.js 1.5** as the fallback. Phase 0 is a head-to-head. | See below. Physics runs only on the host, plus in Fartman play-along on viewers' own machines. |
 | Build | **Vite** | One build for Electron and the website. |
 | Chat | Anonymous IRC (works without login), upgraded to **EventSub** once the streamer logs in | Message tags give `user-id`, `display-name`, `color`, `badges`, and `emotes`. |
-| Streamer login | **Twitch device code flow**: "go to twitch.tv/activate, enter ABCD-EFGH" | Made for desktop apps. No client secret, no server. |
+| Streamer login | **Twitch device code flow**: the app opens twitch.tv/activate in the streamer's browser **with the code pre-filled** | Made for desktop apps. No client secret, no server. |
 | Viewer login | **Twitch OIDC implicit flow** on the website | Returns an ID token **signed by Twitch** (user ID + username). **The relay checks it** and passes only verified identities to the host. |
 | Host ↔ viewers | **Relay: a Node.js (TypeScript) WebSocket server on our Linux server**, behind **Cloudflare's free proxy** | Both sides connect **out** to the relay, so the host's IP is never exposed. The proxy hides the relay server's IP too and absorbs DDoS. Works on every network. The streamer uploads each update once. Shares message types with the host and website. Scales from 100 to 10k+. |
 | Dev and targets | Develop on **Mac**. Ship Steam builds for **Windows** (most Steam players) and Mac, Linux optional. The relay runs on **Linux**. | Electron packages Windows builds from a Mac. **Test on a real Windows PC before launch.** |
@@ -269,12 +269,13 @@ Sources:
 - **The `nonce` is a random, single-use value the relay issued for this join**, not the room code, so a leaked token can't be replayed.
 - **The relay checks:**
   - RS256 signature using Twitch's public keys (`id.twitch.tv/oauth2/keys`, cached and looked up by `kid`)
-  - `iss`, `aud` = the Web client ID, the nonce, and `state`
+  - `iss`, `aud` = the Web client ID, and the nonce
+- **The viewer site** checks the OAuth `state` value before sending anything to the relay.
   - the token is under 10 minutes old
 - The site wipes the token from the URL right away.
 - One socket per Twitch ID per room.
 - The host only ever receives already-verified `{twitchId, name}`, never tokens and never viewer IPs.
-- **"Require Twitch login"** is on by default, as in Jackbox. Unverified viewers can watch but not play.
+- **"Require Twitch login"** is always on for the website, as in Jackbox's option. **Logged-out visitors see only the join page** (which streamer the code belongs to, and a login button). Playing and the live view both require login. Anyone without a login can still play through chat.
 
 ### What "links and saves" means
 
@@ -336,7 +337,7 @@ See §6.
 | The relay passing the host's address on | The relay forwards **game messages only**, never connection details, headers, or IPs, in either direction. |
 | The host fetching something a viewer controls | **Never fetch a viewer-supplied URL.** Skins are IDs and enums only. Emote faces are emote IDs, and the host builds the Twitch CDN URL itself. Profile pictures come from Twitch's API. Fartman level codes are data, never links. |
 | Viewers' IPs reaching the host or other viewers | The host gets only verified `{twitchId, name}`. Viewers never see each other. The relay doesn't log viewer IPs. |
-| OBS websocket (optional feature) | Localhost only, never exposed. |
+| OBS websocket (optional feature) | **Our client** connects only to `127.0.0.1`. OBS itself listens on the network, so docs say: keep the OBS websocket password on and never port-forward 4455. |
 | Third-party signaling relays (the old Trystero idea) | **Removed.** Nothing about a room is published anywhere public. |
 
 ### Bandwidth and scale
@@ -380,7 +381,7 @@ See §6.
 | Service | Used for | If it's down |
 |---|---|---|
 | **Our relay** (Node.js on our Linux server, behind Cloudflare's proxy) | Rooms, login checks, fan-out, input batching | Website play is down; chat and the game still work |
-| Static site hosting (the same Linux server, or GitHub Pages) | The viewer website | Viewers use chat |
+| Static site hosting: **GitHub Pages**, or the Linux server **only through the Cloudflare Tunnel** so the origin IP stays hidden | The viewer website | Viewers use chat |
 | Steam | Distribution, Cloud saves, achievements | The game runs offline; saves stay local |
 | Twitch IRC / EventSub / Helix | Chat, events, profile pictures | Bots or the sim textbox; built-in faces instead of profile pictures |
 | Twitch logins + public keys | Streamer and viewer identity | Chat still works |
@@ -407,7 +408,7 @@ streamer-games/
                              gas particles (for Fartman, reusable)
       skins/   catalog.ts  draw.ts
       players.ts  commands.ts  storage.ts  audio.ts  hud.ts
-      net/     relay-client.ts  snapshot.ts  interp.ts   (WebSocket to the relay only)
+      net/     snapshot.ts  interp.ts   (shared encode/decode; no sockets here)
       dev/     sim-chat.ts  bots.ts
     games/
       tower/                 Game #1: Chat Tower
@@ -417,9 +418,11 @@ streamer-games/
   apps/
     host/                    Electron main + preload (Steam, token storage, saves); loads the host UI
       main/twitch/           ALL Twitch auth, chat, EventSub, Helix: main process only, tokens never reach the renderer
-      main/net/              network allowlist (webRequest), safeFetch, relay connection
+      main/net/              network allowlist (webRequest), safeFetch, and the host's relay socket
+                             (main process only, because host auth sends the Twitch token)
       web/                   host UI: game picker, settings, Twitch login, room code
-    viewer/                  the website: join by code, Twitch login (OIDC), controller, live view, skin editor
+    viewer/                  the website: join by code, Twitch login (OIDC), relay-client.ts (viewer socket),
+                             controller, live view, skin editor
     relay/                   Node.js WebSocket server for the Linux server: rooms, codes, token checks
                              (verify.ts), fan-out workers, input batching/rate limits; never forwards IPs
   spikes/                    Phase 0 head-to-head (Box2D v3 vs Planck), kept for reference
@@ -433,6 +436,7 @@ streamer-games/
 export default {
   id: 'tower', title: 'Chat Tower',
   createHost(ctx) {              // HOST ONLY: ctx = { world, physics, makePerson, players, settings, save, hud, emit, twitch }
+                                 // ctx.twitch = the narrow preload API (createClip, startPrediction…), never a Twitch client or token
     return {
       update(dt) {},
       onCommand(player, cmd, args) {},     // chat, website, channel points, bits — all the same
@@ -741,7 +745,8 @@ The streamer plays Fartman. Chat has stream delay; website players are live.
      - Live control goes to the highest bettors, or a random draw among them.
      - Everyone else's loads skip the crane and drop at the angle they asked for.
 4. **Result:**
-   - **Collapse** (road deck in the water) → **the viewer whose load broke it wins.**
+   - **Collapse** (road deck in the water) → **in bet rounds, the viewer whose load broke it wins** the jackpot. Every load in a bet round is Scrap-paid or free (`!march`); Bits never send loads in bet rounds.
+   - **Free-for-all rounds** (the only rounds where Bits can send loads): **no bets, no Prediction, no Scrap payouts, and the pot isn't touched.** Breaking it earns glory and a hall-of-fame spot only.
    - **Survives** → the engineer wins, the streak grows, and the pot rolls over and grows.
 
 ### Physics (Box2D v3)
@@ -895,6 +900,7 @@ The plan has no code yet, so these are requirements, each with a test. **Streame
 5. **Nothing secret on screen.**
    - The device-code login opens in the system browser and its code is never drawn in the game.
    - Secrets (OBS password) are typed in a **separate window**, masked. Game Capture of the main window won't record it, but warn that Display Capture would.
+   - The OBS password is stored with `safeStorage` next to the Twitch tokens, never in a synced folder.
    - In-game errors never show file paths, usernames, or stack traces.
 6. **OBS (optional feature):** connect only to `ws://127.0.0.1:4455`. Docs say never to port-forward 4455.
 7. **No telemetry.** No third-party crash or analytics SDKs, and Electron `crashReporter` uploads are off. Any future crash reporting is opt-in, sends no memory dumps, and removes file paths.
@@ -911,13 +917,14 @@ The plan has no code yet, so these are requirements, each with a test. **Streame
    - The host sends its Twitch token once; the relay calls `id.twitch.tv/oauth2/validate`, checks that `client_id` is the Host app, keeps only `user_id`, and throws the token away without logging it.
    - **One room per broadcaster.** A 128-bit resume secret is needed to reconnect.
    - No website room without a logged-in host.
-10. **Viewer login.** As in §3: a relay-issued single-use nonce, plus checks on RS256, `kid`, `iss`, `aud`, `state`, and token age under 10 minutes. One socket per Twitch ID per room.
+10. **Viewer login.** As in §3: a relay-issued single-use nonce, plus checks on RS256, `kid`, `iss`, `aud`, and token age under 10 minutes. The OAuth `state` is checked by the viewer site. One socket per Twitch ID per room.
 11. **Strict input validation, at the relay, before anything reaches the host.**
     - The `protocol` package has one strict schema per message: no extra keys, `__proto__` rejected.
     - Numbers must be finite and are clamped. Limb input is a 5-bit mask plus -1/0/1, only from the active player, at most 30 Hz.
     - Bets are integers between 1 and the balance.
     - Colors match `^#[0-9a-f]{6}$`. Emote IDs must look like Twitch IDs.
-    - **Frames are capped at 1 KB** (4 KB for level codes), and decompression stops at 64 KB.
+    - **Viewer→relay frames are capped at 1 KB** (4 KB for level codes), and decompression stops at 64 KB.
+    - **Host→relay frames** (snapshots, state) come only from the authenticated host socket and have their own larger cap (about 256 KB, tuned in Phase 8). Bigger frames are dropped and logged.
     - Sub-only presets are checked against Twitch, not taken on the client's word.
 12. **No streamer IPs, ever.**
     - Host sockets never read `CF-Connecting-IP`; hosts are rate-limited by broadcaster ID.
@@ -935,7 +942,7 @@ The plan has no code yet, so these are requirements, each with a test. **Streame
 
 ### Viewer website and privacy
 
-16. **The viewer site never loads URLs it receives from the host.** Its CSP has `img-src https://static-cdn.jtvnw.net` plus its own files, so a hostile host can't learn viewers' IPs.
+16. **The viewer site only loads image URLs that start with `https://static-cdn.jtvnw.net/`** (Twitch avatars and emotes). It checks the prefix in code, and CSP `img-src https://static-cdn.jtvnw.net` plus its own files enforces it. Any other URL from the host is ignored, so a hostile host can't learn viewers' IPs.
 17. **Data kept on the host:**
     - Never store chat text.
     - Delete profiles idle more than 12 months.
@@ -973,7 +980,7 @@ Each phase ends with a check before the next one starts.
    - **Gate:** no NaN or blow-ups, wobble that looks right, under 4 ms per step with 50 people, and every adapter feature working. **Pick the winner, record why in `spikes/`.**
 1. **Scaffold.**
    - TypeScript monorepo (npm workspaces), Vite, Phaser 4 scene base, view list, camera, HUD, settings, the `protocol` package.
-   - **The Electron shell from day one**, so the same build runs in both the app and a browser on the Mac.
+   - **The Electron shell from day one**, so the same build runs in both the app and a browser on the Mac. The browser-tab mode never has a Twitch login: simulated or anonymous chat only.
    - **Hardened from day one** (§14a items 1, 3, 7, 8): network allowlist, sandbox, fuses, CSP, no telemetry, pinned dependencies. Test: the allowlist blocks an arbitrary URL.
 2. **Person.** Ragdoll, freeze, unfreeze, pose, **limb extend/tuck + rotate**, and a test page.
 3. **Chat.** Anonymous IRC **in the main process**, parsers, players table, commands with strict validation, sim, bots.
