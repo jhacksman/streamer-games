@@ -270,8 +270,8 @@ Sources:
 - **The relay checks:**
   - RS256 signature using Twitch's public keys (`id.twitch.tv/oauth2/keys`, cached and looked up by `kid`)
   - `iss`, `aud` = the Web client ID, and the nonce
-- **The viewer site** checks the OAuth `state` value before sending anything to the relay.
   - the token is under 10 minutes old
+- **The viewer site** checks the OAuth `state` value before sending anything to the relay.
 - The site wipes the token from the URL right away.
 - One socket per Twitch ID per room.
 - The host only ever receives already-verified `{twitchId, name}`, never tokens and never viewer IPs.
