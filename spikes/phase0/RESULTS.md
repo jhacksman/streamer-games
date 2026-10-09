@@ -112,3 +112,84 @@ The upgrade surfaced four things:
 **Sticky bonds between new pairs are rare** with the summit-aiming test bot, which always lands on exactly one person. A sticky radius (`stickyRadius`) is now tunable. Real players aiming into gaps between two people should trigger it; tune in Phase 4.
 
 **Frame-time watch.** With 11 shapes per person, the sticky scan costs more. The worst case (a 50-person pile, everything sticky) hit a 3.3 ms p95 whole frame on Box2D, still under 4 ms. Phase 1: spatial hash plus batched transform reads.
+
+## Addendum 2: landing redesign (2026-10-09, your feedback)
+
+**What was wrong:**
+- The 40 m picture forced every person into all-limbs-out, and the test bot held random keys from spawn to landing. Neither showed "tucked unless a key is held".
+- "Freeze on first touch" welded people by **one point**.
+
+**The landing rule now** (`spikes/phase0/src/tower.ts`):
+
+| State | What happens |
+|---|---|
+| **falling** | Tucked. A limb or the neck extends **only while its key is held**. U/P drift, I/O rotate. |
+| **pivoting** | The first touch with a sticky orb involved pins that point as a hinge. A **sticky catch** stops relative motion, and a posture controller holds the angle during your turn. I/O swing you around the pin. Body and limb touches just collide. |
+| **locked** | A second sticky touch by a different part, at least 0.3 × size away, freezes you and welds you at both points. Two orbs touching at once lock immediately. After your turn, a pinned person dangles and usually swings into a lock alone. |
+
+**People:**
+- Round 8-sided body.
+- Viewers are scale 0.5: about 17 kg, versus a 70 kg host.
+- The streamer is full size, T-posed.
+- `specFor(scale)` scales every dimension, motor, and torque.
+
+**The bot now plays like a viewer:**
+- tucked while falling
+- steers toward the summit
+- presses one limb key only within about 1 m of landing
+- once pinned, holds a rotate key toward gravity, and extends the limbs on the far side to reach a second point
+- flips direction if stuck
+
+`passive` presses nothing.
+
+**Results (40 drops, fixed base):**
+
+| | Planck | Box2D v3 |
+|---|---|---|
+| Player bot: locked / missed | 40 / 0 | 39 / 1 |
+| Player bot: average pin → lock | 0.44 s | 0.45 s |
+| Landed on two points at once (25-drop run) | 12 of 25 | 8 of 25 |
+| Passive: locked (mostly by dangling into place after their turn) | 40 | 37 |
+| Balanced base (stand-in balancing bot) | 39 locked | 26 locked, then **collapsed** at 7.1 m |
+| NaN / blow-ups | none | none |
+
+- Box2D is still bit-identical between compat and deluxe and run to run.
+- 90 tests pass, including new landing-rule tests:
+  - tucked until a key is pressed
+  - one pin holds your angle for 2 s
+  - rotating swings at least 0.5 rad and then locks with at least 2 points
+  - every locked person in a 20-drop game has at least 2 points
+  - only orbs are sticky
+  - viewer half size and quarter mass
+
+**Two physics lessons:**
+- **Drive the heavy part directly.** The first hinge (a motor on the pin joint) acted on the light 1 kg orb, which had to drag the 17 kg body through the stretch joint. It sagged up to 1.8 rad on Planck and 0.6 rad on Box2D. A controller applying torque to the body itself (gravity cancelled, plus a little integral) holds within 0.03 rad on both.
+- **The stand-in balancing bot chased the tower's center of mass,** which moves with the cart, so it ran away wall to wall. It now reacts to the lean, like balancing a broom. It's still just a stand-in for the human streamer.
+
+**Frame time:** worst whole-frame p95 is about 4.0–4.4 ms for passive 40-person games (danglers, sticky scans). Physics alone is under 0.1 ms. Same Phase 1 fix as before: batched transform reads and a spatial hash.
+
+### Review fixes (independent code review of the landing redesign)
+
+1. **A second orb that's already touching now locks.** Locks used to be checked only when a touch began. The hold keeps you still, so a touch that became valid later never fired again. Tucked feet sit 0.148 m apart, just under the old 0.15 m spacing, so landing on both feet didn't count.
+   - Now: live sticky touches are tracked (begin/end events) and re-checked every step.
+   - `minLockSpacing` is 0.25 × size.
+   - Two-at-once landings for passive bots went from 9 to 18 of 40 (Planck) and 5 to 12 (Box2D).
+2. **Swing overshoot fixed.** It was 0.26–0.33 rad after releasing I/O; now 0.04–0.065. The posture controller's integral resets while turning or blocked, and damping is measured against the intended swing speed.
+3. **The pin is identified by body part, not by shape handle.** Limb beams get new handles as they stretch.
+4. **Cleanup:**
+   - locked people drop their turn state
+   - bond counts and re-stick cooldowns for removed people are pruned
+   - someone who never sticks (resting on a body or limb) becomes debris after their turn
+
+Across six seeds, the player bot misses 0–1 of 40 per game on both engines. One Box2D seed missed 7: a bond near the bottom snapped, about 20 people fell off as debris onto the tower, and later drops hit that debris. That's balance tuning for Phase 4.
+
+### Single-player mode (`?mode=play`)
+
+Tetris-style:
+- Each viewer appears on a **claw** above the tower: U/P slide, I/O turn, limb keys set the shape, **Space** drops.
+- Once you lock, the next viewer is on the claw.
+- Falling and pinning work exactly as above.
+- `&base=balanced` hands the streamer's cart to the ← / → keys.
+- **Esc** restarts.
+
+The claw is part of the sim (`crane: true`), so bots use it too: 15 of 15 locked on both engines.
