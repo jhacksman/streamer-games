@@ -1,0 +1,29 @@
+{
+  "name": "streamer-games",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "spikes/*"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "phase0": "tsx spikes/phase0/src/run.ts",
+    "phase0:viewer": "vite spikes/phase0/viewer"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "box2d3-wasm": "5.2.0",
+    "planck": "1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.4",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  }
+}
