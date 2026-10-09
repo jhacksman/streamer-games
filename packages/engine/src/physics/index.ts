@@ -3,6 +3,7 @@ import { createPlanckPhysics } from './planck.ts';
 import type { BackendName, Physics, Vec2 } from './types.ts';
 
 export * from './types.ts';
+export * from './geometry.ts';
 export { createBox2D3Physics, createPlanckPhysics };
 
 export interface WorldOptions {
@@ -13,6 +14,12 @@ export interface WorldOptions {
   velocityIterations?: number;
   positionIterations?: number;
   enableSleep?: boolean;
+  /**
+   * Box2D only: give this world its own fresh WASM instance (default true). Worlds sharing one
+   * instance were not repeatable in Phase 0: state left in WASM memory by an earlier world
+   * changed later results. A fresh instance per world is bit-for-bit repeatable.
+   */
+  freshModule?: boolean;
 }
 
 type Flavour = 'auto' | 'compat' | 'deluxe';
@@ -40,8 +47,8 @@ function flavourUrl(flavour: 'compat' | 'deluxe'): string {
  * package's auto-selection so tests can pin a build. Threading is always off
  * (pthreadCount 0); we step single-threaded for determinism.
  */
-export function loadBox2D3(flavour: Flavour = 'auto'): Promise<Box2DModule> {
-  let p = modules.get(flavour);
+export function loadBox2D3(flavour: Flavour = 'auto', fresh = false): Promise<Box2DModule> {
+  let p = fresh ? undefined : modules.get(flavour);
   if (!p) {
     p = (async () => {
       if (flavour === 'auto') {
@@ -51,7 +58,7 @@ export function loadBox2D3(flavour: Flavour = 'auto'): Promise<Box2DModule> {
       const mod = await import(/* @vite-ignore */ flavourUrl(flavour));
       return mod.default({ pthreadCount: 0 });
     })();
-    modules.set(flavour, p);
+    if (!fresh) modules.set(flavour, p);
   }
   return p;
 }
@@ -62,10 +69,11 @@ export async function createPhysics(backend: BackendName, opts: WorldOptions = {
     case 'planck':
       return createPlanckPhysics({ gravity, velocityIterations: opts.velocityIterations, positionIterations: opts.positionIterations });
     case 'box2d3':
-      return createBox2D3Physics(await loadBox2D3('auto'), { gravity, subSteps: opts.subSteps, enableSleep: opts.enableSleep }, 'box2d3');
     case 'box2d3-compat':
-      return createBox2D3Physics(await loadBox2D3('compat'), { gravity, subSteps: opts.subSteps, enableSleep: opts.enableSleep }, 'box2d3-compat');
-    case 'box2d3-deluxe':
-      return createBox2D3Physics(await loadBox2D3('deluxe'), { gravity, subSteps: opts.subSteps, enableSleep: opts.enableSleep }, 'box2d3-deluxe');
+    case 'box2d3-deluxe': {
+      const flavour = backend === 'box2d3' ? 'auto' : backend === 'box2d3-compat' ? 'compat' : 'deluxe';
+      const module = await loadBox2D3(flavour, opts.freshModule ?? true);
+      return createBox2D3Physics(module, { gravity, subSteps: opts.subSteps, enableSleep: opts.enableSleep }, backend);
+    }
   }
 }

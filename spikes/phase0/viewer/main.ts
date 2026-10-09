@@ -19,6 +19,10 @@ function config(): TowerConfig {
     dropInterval: num('interval', 1.4),
     leanStep: num('leanStep', 0.18),
     sticky: q.get('sticky') !== '0',
+    aim: q.get('aim') !== '0',
+    limbs: q.has('limbs') ? Number(q.get('limbs')) : -1,
+    weld: { angularHertz: num('hz', 12), angularDamping: 0.7 },
+    stickyRadius: num('sticky_r', 0.04),
     limits: {
       ...DEFAULT_LIMITS,
       tension: num('tension', DEFAULT_LIMITS.tension),

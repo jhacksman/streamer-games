@@ -234,6 +234,19 @@ describe.each(BACKENDS)('%s adapter', (name) => {
     p.dispose();
   });
 
+  it('removeShape takes a shape off its body and updates the mass', async () => {
+    const p = await createPhysics(name);
+    const b = p.createBody({ type: 'dynamic', position: { x: 0, y: 5 } });
+    p.addShape(b, { kind: 'box', hx: 0.5, hy: 0.5 }, { density: 1 });
+    const extra = p.addShape(b, { kind: 'box', hx: 0.5, hy: 0.5, center: { x: 1, y: 0 } }, { density: 1 });
+    expect(p.getMass(b)).toBeCloseTo(2, 2);
+    p.removeShape(extra);
+    expect(p.bodyShapes(b)).toHaveLength(1);
+    expect(p.shape(extra)).toBeUndefined();
+    expect(p.getMass(b)).toBeCloseTo(1, 2);
+    p.dispose();
+  });
+
   it('destroying a body removes its joints from the registry', async () => {
     const p = await createPhysics(name);
     const a = box(p, 0, 0);

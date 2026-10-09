@@ -1,13 +1,14 @@
-// Goo person shared by every game (World of Goo look): a body, plus a head, two hands and two
-// feet that are sticky orbs on stretchy limbs. Five joints total, one per limb: holding a
-// limb's key stretches it out along a fixed direction; letting go pulls it back in.
-// While live (hanging or falling) the person can also slowly rotate and drift sideways.
+// The person shared by every game: a stumpy little human whose head, hands and feet are sticky
+// orbs on stretchy limbs. Five joints total, one per limb: holding a limb's key stretches it out
+// along a fixed direction; letting go pulls it back in. Limbs are solid, weightless beams
+// (scaffolding others can land on and stick to). While live (hanging or falling) the person can
+// also slowly rotate and drift sideways.
 //
 // Front view, +y up, person frame origin at the body's center.
 import type { BodyHandle, Filter, JointHandle, Physics, ShapeGeom, ShapeHandle, Transform, Vec2 } from '../physics/types.ts';
 
 export type PartName = 'body' | 'head' | 'handL' | 'handR' | 'footL' | 'footR';
-export type PartKind = 'body' | 'orb';
+export type PartKind = 'body' | 'orb' | 'limb';
 export type LimbKey = 'armL' | 'legL' | 'legR' | 'armR' | 'neck';
 
 /** Bit per stretchable limb; a person's limb state is a 5-bit mask. */
@@ -16,7 +17,8 @@ export const ALL_LIMBS = 31;
 
 export interface PartTag {
   personId: number;
-  part: PartName;
+  /** Body or orb name, or the limb name for a limb beam. */
+  part: PartName | LimbKey;
   kind: PartKind;
 }
 
@@ -32,6 +34,8 @@ export interface LimbSpec {
   /** Extra length when fully stretched. */
   reach: number;
   radius: number;
+  /** Width of the solid limb beam (meters). */
+  thickness: number;
   maxForce: number;
 }
 
@@ -41,11 +45,11 @@ export const PERSON_DENSITY = 160; // ~70 kg person
 export const BODY_GEOM: ShapeGeom = { kind: 'box', hx: 0.2, hy: 0.27 };
 
 export const LIMBS: readonly LimbSpec[] = [
-  { name: 'neck', orb: 'head', root: { x: 0, y: 0.25 }, angle: 90 * DEG, tucked: 0.2, reach: 0.35, radius: 0.17, maxForce: 2500 },
-  { name: 'armL', orb: 'handL', root: { x: -0.17, y: 0.16 }, angle: 160 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, maxForce: 1500 },
-  { name: 'armR', orb: 'handR', root: { x: 0.17, y: 0.16 }, angle: 20 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, maxForce: 1500 },
-  { name: 'legL', orb: 'footL', root: { x: -0.1, y: -0.25 }, angle: 250 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, maxForce: 2500 },
-  { name: 'legR', orb: 'footR', root: { x: 0.1, y: -0.25 }, angle: 290 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, maxForce: 2500 },
+  { name: 'neck', orb: 'head', root: { x: 0, y: 0.25 }, angle: 90 * DEG, tucked: 0.2, reach: 0.35, radius: 0.17, thickness: 0.15, maxForce: 2500 },
+  { name: 'armL', orb: 'handL', root: { x: -0.17, y: 0.16 }, angle: 160 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, thickness: 0.16, maxForce: 1500 },
+  { name: 'armR', orb: 'handR', root: { x: 0.17, y: 0.16 }, angle: 20 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, thickness: 0.16, maxForce: 1500 },
+  { name: 'legL', orb: 'footL', root: { x: -0.1, y: -0.25 }, angle: 250 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, thickness: 0.2, maxForce: 2500 },
+  { name: 'legR', orb: 'footR', root: { x: 0.1, y: -0.25 }, angle: 290 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, thickness: 0.2, maxForce: 2500 },
 ];
 
 const LIMB_BY_NAME = new Map(LIMBS.map((l) => [l.name, l]));
@@ -127,6 +131,23 @@ export function partGeom(part: PartName): ShapeGeom {
   return { kind: 'circle', radius: limb.radius };
 }
 
+/** A limb beam from `from` to `to` (same frame), as a box; null if too short to matter. */
+function beamGeom(from: Vec2, to: Vec2, thickness: number): ShapeGeom | null {
+  const len = Math.hypot(to.x - from.x, to.y - from.y);
+  if (len < 0.02) return null;
+  return { kind: 'box', hx: len / 2, hy: thickness / 2, center: { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }, angle: Math.atan2(to.y - from.y, to.x - from.x) };
+}
+
+/**
+ * Limb beams are effectively weightless. Not exactly 0: in box2d3-wasm, adding a zero-density
+ * shape to a body could zero that body's rotational inertia (it then can't be turned by any
+ * joint or contact and spins forever). Found in Phase 0; a tiny density avoids it.
+ */
+const LIMB_DENSITY = 1e-3;
+
+/** Rebuild a limb beam once its length drifts this far from the shape (meters). */
+const LIMB_REBUILD = 0.03;
+
 function transformGeom(g: ShapeGeom, t: Transform): ShapeGeom {
   if (g.kind === 'box') {
     return { kind: 'box', hx: g.hx, hy: g.hy, center: add({ x: t.x, y: t.y }, rot(g.center ?? { x: 0, y: 0 }, t.angle)), angle: t.angle + (g.angle ?? 0) };
@@ -185,6 +206,8 @@ export class Person {
   body: BodyHandle | null = null;
   /** Part positions relative to the body frame, captured at freeze time. */
   private frozenFrames = new Map<PartName, Transform>();
+  /** Live limb beams (one shape on each orb body) and the length they were built at. */
+  private limbBeams = new Map<LimbKey, { shape: ShapeHandle; length: number }>();
 
   private motorGain: number;
   private motorMaxSpeed: number;
@@ -219,6 +242,27 @@ export class Person {
     return { personId: this.id, part, kind: part === 'body' ? 'body' : 'orb' };
   }
 
+  private limbTag(limb: LimbKey): PartTag {
+    return { personId: this.id, part: limb, kind: 'limb' };
+  }
+
+  /** Live: (re)build a limb's solid beam on its orb, from the orb back to the limb root. */
+  private buildLimbBeam(l: LimbSpec, length: number) {
+    const p = this.physics;
+    const old = this.limbBeams.get(l.name);
+    if (old) p.removeShape(old.shape);
+    this.limbBeams.delete(l.name);
+    const orb = this.parts.get(l.orb);
+    if (orb === undefined) return;
+    // The orb keeps the body's orientation (the stretch joint locks rotation), so in the orb's
+    // frame the root lies straight back along the limb direction.
+    const back = scale(dirOf(this.angles[l.name]), -length);
+    const geom = beamGeom({ x: 0, y: 0 }, back, l.thickness);
+    if (!geom) return;
+    const shape = p.addShape(orb, geom, { density: LIMB_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.limbTag(l.name) });
+    this.limbBeams.set(l.name, { shape, length });
+  }
+
   private shapeFilter(): Partial<Filter> {
     return { category: this.filter.category, mask: this.filter.mask, group: this.group };
   }
@@ -246,6 +290,8 @@ export class Person {
         bodyA: body, bodyB: orb, anchor: root, anchorB, axis: dir,
         limits: { lower: 0, upper: l.reach }, motor: { speed: 0, maxForce: l.maxForce * this.strength },
       }));
+      const d = sub({ x: ot.x, y: ot.y }, root);
+      this.buildLimbBeam(l, Math.hypot(d.x, d.y));
     }
   }
 
@@ -257,8 +303,13 @@ export class Person {
     for (const l of LIMBS) {
       const h = this.joints.get(l.name);
       if (h === undefined || !p.jointExists(h)) continue;
-      const err = targets[l.name] - p.jointTranslation(h);
+      const stretch = p.jointTranslation(h);
+      const err = targets[l.name] - stretch;
       p.setMotorSpeed(h, Math.max(-this.motorMaxSpeed, Math.min(this.motorMaxSpeed, this.motorGain * err)));
+      // Keep the solid beam matched to the limb's current length.
+      const length = l.tucked + Math.max(0, stretch);
+      const beam = this.limbBeams.get(l.name);
+      if (!beam || Math.abs(beam.length - length) > LIMB_REBUILD) this.buildLimbBeam(l, length);
     }
     // Air control: nudge the whole person toward a capped sideways speed and spin rate.
     const body = this.parts.get('body')!;
@@ -371,12 +422,19 @@ export class Person {
     for (const b of this.parts.values()) p.destroyBody(b);
     this.parts.clear();
     this.joints.clear();
+    this.limbBeams.clear();
 
     const body = p.createBody({ type: 'dynamic', position: { x: bt.x, y: bt.y }, angle: bt.angle, tag: { personId: this.id, frozen: true } });
     for (const [part, frame] of this.frozenFrames) {
       p.addShape(body, transformGeom(partGeom(part), frame), {
         density: PERSON_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.tag(part),
       });
+    }
+    // Solid, weightless limb beams: the scaffolding other people land on and stick to.
+    for (const l of LIMBS) {
+      const orb = this.frozenFrames.get(l.orb);
+      const geom = orb ? beamGeom(l.root, { x: orb.x, y: orb.y }, l.thickness) : null;
+      if (geom) p.addShape(body, geom, { density: LIMB_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.limbTag(l.name) });
     }
     const center = p.getWorldCenter(body);
     p.setVelocity(body, { vx: vel.x - w * (center.y - com.y), vy: vel.y + w * (center.x - com.x), w });
@@ -439,6 +497,7 @@ export class Person {
     for (const b of this.bodies()) this.physics.destroyBody(b);
     this.parts.clear();
     this.joints.clear();
+    this.limbBeams.clear();
     this.body = null;
   }
 }

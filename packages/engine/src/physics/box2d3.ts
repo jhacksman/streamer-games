@@ -11,6 +11,7 @@ import type {
   PrismaticDef, RevoluteDef, ShapeGeom, ShapeHandle, ShapeOpts, ShapeRecord, Transform, Vec2,
   Velocity, WeldDef, WheelDef,
 } from './types.ts';
+import { contactPoint as geomContactPoint } from './geometry.ts';
 
 // The wasm module's own typings are large; we use a loose type at this boundary only.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,24 +135,6 @@ export function createBox2D3Physics(B: Box2DModule, opts: Box2D3Options = {}, la
     return h;
   }
 
-  function contactPoint(shapeA: Id, shapeB: Id): Vec2 | null {
-    const keyB = idKey(shapeB);
-    const data = B.b2Shape_GetContactData(shapeA, 8);
-    if (!data) return null;
-    let found: Vec2 | null = null;
-    const n = data.length ?? data.size?.() ?? 0;
-    for (let i = 0; i < n && !found; i++) {
-      const c = data.get ? data.get(i) : data[i];
-      if (!c) continue;
-      const other = idKey(c.shapeIdA) === keyB || idKey(c.shapeIdB) === keyB;
-      if (other && c.manifold.pointCount > 0) {
-        const mp = c.manifold.GetPoint(0);
-        found = { x: mp.point.x, y: mp.point.y };
-      }
-    }
-    return found;
-  }
-
   const bodyTypeOf = (t: BodyOpts['type']) =>
     t === 'static' ? B.b2BodyType.b2_staticBody : t === 'kinematic' ? B.b2BodyType.b2_kinematicBody : B.b2BodyType.b2_dynamicBody;
 
@@ -167,7 +150,7 @@ export function createBox2D3Physics(B: Box2DModule, opts: Box2D3Options = {}, la
         const sa = shapeByKey.get(idKey(e.shapeIdA));
         const sb = shapeByKey.get(idKey(e.shapeIdB));
         if (sa !== undefined && sb !== undefined) {
-          out.push({ shapeA: sa, shapeB: sb, point: contactPoint(e.shapeIdA, e.shapeIdB) });
+          out.push({ shapeA: sa, shapeB: sb, point: null });
         }
         e.delete?.();
       }
@@ -180,6 +163,9 @@ export function createBox2D3Physics(B: Box2DModule, opts: Box2D3Options = {}, la
         e.delete?.();
       }
       ev.delete?.();
+      // Contact points come from our own geometry, not b2Shape_GetContactData: that call made
+      // results differ between runs in the same process (Phase 0 finding).
+      for (const c of out) c.point = geomContactPoint(physics, c.shapeA, c.shapeB);
       begins = out;
       ends = outEnds;
     },
@@ -268,6 +254,16 @@ export function createBox2D3Physics(B: Box2DModule, opts: Box2D3Options = {}, la
       shapeByKey.set(idKey(id), s);
       e.shapes.push(s);
       return s;
+    },
+
+    removeShape(s) {
+      const rec = shapes.get(s);
+      if (!rec) return;
+      B.b2DestroyShape(rec.id, true);
+      shapeByKey.delete(idKey(rec.id));
+      const e = bodies.get(rec.body);
+      if (e) e.shapes = e.shapes.filter((x) => x !== s);
+      shapes.delete(s);
     },
 
     shape: (s) => shapes.get(s),

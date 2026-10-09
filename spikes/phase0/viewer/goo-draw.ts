@@ -86,18 +86,19 @@ export function drawGooPerson(ctx: CanvasRenderingContext2D, _p: Physics, person
   const bt = person.bodyTransform();
   const P = (v: { x: number; y: number }) => ({ x: view.toX(v.x), y: view.toY(v.y) });
 
-  const drawLimb = (name: LimbKey, width: number) => {
+  const drawLimb = (name: LimbKey) => {
     const l = LIMBS.find((x) => x.name === name)!;
+    const width = l.thickness; // drawn exactly as wide as the solid physics beam
     const a = P(person.limbRoot(name));
     const b = P(person.partPosition(l.orb));
     // stretched limbs get a bit thinner, like pulled taffy
     const stretch = Math.max(0, Math.min(1, person.stretch(name) / l.reach));
-    limb(ctx, a.x, a.y, b.x, b.y, width * s * (1 - 0.2 * stretch), skin, lw);
+    limb(ctx, a.x, a.y, b.x, b.y, width * s * (1 - 0.1 * stretch), skin, lw);
     return { b, r: l.radius * s };
   };
 
   // legs behind the torso
-  const feet = [drawLimb('legL', 0.21), drawLimb('legR', 0.21)];
+  const feet = [drawLimb('legL'), drawLimb('legR')];
   for (const f of feet) orb(ctx, f.b.x, f.b.y, f.r, skin, lw);
 
   // torso: broad-shouldered, chunky, wearing shorts
@@ -151,15 +152,16 @@ export function drawGooPerson(ctx: CanvasRenderingContext2D, _p: Physics, person
   ctx.restore();
 
   // arms in front of the torso
-  const hands = [drawLimb('armL', 0.17), drawLimb('armR', 0.17)];
+  const hands = [drawLimb('armL'), drawLimb('armR')];
   for (const h of hands) orb(ctx, h.b.x, h.b.y, h.r, skin, lw);
 
   // neck + head
   const neckRoot = P(person.limbRoot('neck'));
   const hc = person.partPosition('head');
   const head = P(hc);
-  const neckStretch = Math.max(0, Math.min(1, person.stretch('neck') / LIMBS[0]!.reach));
-  limb(ctx, neckRoot.x, neckRoot.y, head.x, head.y, 0.16 * s * (1 - 0.2 * neckStretch), skin, lw);
+  const neckSpec = LIMBS.find((l) => l.name === 'neck')!;
+  const neckStretch = Math.max(0, Math.min(1, person.stretch('neck') / neckSpec.reach));
+  limb(ctx, neckRoot.x, neckRoot.y, head.x, head.y, neckSpec.thickness * s * (1 - 0.1 * neckStretch), skin, lw);
   const r = LIMBS.find((l) => l.orb === 'head')!.radius * s;
   orb(ctx, head.x, head.y, r, skin, lw);
 

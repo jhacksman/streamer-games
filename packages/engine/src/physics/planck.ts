@@ -5,6 +5,7 @@ import type {
   PrismaticDef, RevoluteDef, ShapeGeom, ShapeHandle, ShapeOpts, ShapeRecord, Transform, Vec2,
   Velocity, WeldDef, WheelDef,
 } from './types.ts';
+import { contactPoint as geomContactPoint } from './geometry.ts';
 
 export interface PlanckOptions {
   gravity?: Vec2;
@@ -49,9 +50,8 @@ export function createPlanckPhysics(opts: PlanckOptions = {}): Physics {
     const sb = fixtureToShape.get(fb);
     if (sa === undefined || sb === undefined) return;
     if (!shapes.get(sa)?.opts.contactEvents && !shapes.get(sb)?.opts.contactEvents) return;
-    const wm = contact.getWorldManifold(null);
-    const p = wm && wm.points.length > 0 ? wm.points[0] : null;
-    pending.push({ shapeA: sa, shapeB: sb, point: p ? { x: p.x, y: p.y } : null });
+    // Points are filled in after the step from shape geometry, same as the Box2D backend.
+    pending.push({ shapeA: sa, shapeB: sb, point: null });
   });
 
   world.on('end-contact', (contact) => {
@@ -105,6 +105,7 @@ export function createPlanckPhysics(opts: PlanckOptions = {}): Physics {
       lastDt = dt;
       pending = [];
       world.step(dt, velIters, posIters);
+      for (const c of pending) c.point = geomContactPoint(physics, c.shapeA, c.shapeB);
       begins = pending;
       // End events can also fire outside step() (e.g. when a body is destroyed); report them with this step.
       ends = pendingEnds;
@@ -156,6 +157,15 @@ export function createPlanckPhysics(opts: PlanckOptions = {}): Physics {
       fixtureToShape.set(fixture, s);
       e.shapes.push(s);
       return s;
+    },
+
+    removeShape(s) {
+      const rec = shapes.get(s);
+      if (!rec) return;
+      const e = bodies.get(rec.body);
+      e?.body.destroyFixture(rec.fixture);
+      if (e) e.shapes = e.shapes.filter((x) => x !== s);
+      shapes.delete(s);
     },
 
     shape: (s) => shapes.get(s),
