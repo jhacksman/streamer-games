@@ -1,7 +1,7 @@
 import { createPhysics, type BackendName } from '../../../packages/engine/src/physics/index.ts';
 import { TowerSim, type TowerConfig } from './tower.ts';
 
-export const DETERMINISM_CONFIG: TowerConfig = { seed: 7, drops: 20, placement: 'random', aim: true };
+export const DETERMINISM_CONFIG: TowerConfig = { seed: 7, drops: 8, bot: 'player' };
 export const DETERMINISM_STEPS = 1800;
 
 export async function fingerprint(backend: BackendName, steps = DETERMINISM_STEPS): Promise<string> {

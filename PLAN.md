@@ -50,7 +50,7 @@ A **party pack of physics games for Twitch streamers**, set up like Jackbox:
 **What makes it fun:** floppy limbs, and freezing in awkward poses to make the next player's climb harder.
 
 **What we take:**
-- Freeze on contact.
+- Freezing in place once you're held, plus a hinge-and-lock rule of our own: one sticky touch pins you (you can swing), two lock you in.
 - **Per-limb control**, simplified: one key per limb that **extends** it from a tucked ball, plus rotate. Shape yourself on the way down.
 - Floppy physics.
 - A per-person score.
@@ -216,7 +216,7 @@ Sources:
 | Bridge cables | Distance joint with `minLength` / `maxLength` (tension-only rope) |
 | Vehicles | Wheel joint |
 | Freezing people into one body | **Compound bodies** (many shapes on one body) |
-| Freeze on contact, keyholes, gas clouds | Contact and sensor **event lists after each step**: `b2World_GetContactEvents` / `b2World_GetSensorEvents`, enabled per shape. Since events arrive between steps, freezing someone is easy and safe. |
+| Pins and locks on contact, keyholes, gas clouds | Contact and sensor **event lists after each step**: `b2World_GetContactEvents` / `b2World_GetSensorEvents`, enabled per shape. Since events arrive between steps, pinning or locking someone is easy and safe. |
 
 **The risk, and how we handle it:**
 - box2d3-wasm is a small community project (about 66 GitHub stars; npm 5.2.0, Feb 2026).
@@ -459,27 +459,29 @@ export default {
 *(Redesigned during Phase 0 from your feedback. Code: `packages/engine/src/person/person.ts`.)*
 
 - **The look:** a **stumpy little human**, Mount Your Friends style:
-  - a chunky torso in shorts
+  - a **round body** in shorts
   - thick, short arms and legs
   - an outlined cartoon look
   - a cute face
 
-  Its **head, hands, and feet are round sticky orbs**, World of Goo style.
+  Its **head, hands, and feet are round sticky orbs**, World of Goo style. *(Round body: your call.)*
+- **Sizes** *(your call)*: the host (streamer) is full size, about 70 kg. **Viewers are half the size**, so about a quarter of the mass (about 17 kg). Every dimension, motor, and torque scales with size (`specFor(scale)`).
 - **The physics:** one **body** plus **five orbs** (head, two hands, two feet). Each orb rides a **stretch (prismatic) joint** along a fixed direction from the body: neck up, arms out, legs down.
   - That's **6 bodies and 5 joints**, down from 11 and 10.
-  - **Limbs are solid scaffolding** *(your call)*: each is a solid, effectively weightless beam from the body to its orb. Stretched people are spiky pieces others land on and stick to. While falling, a limb hitting the tower counts as the landing.
+  - The body is an 8-sided ellipse (Box2D polygons max out at 8 sides).
+  - **Limbs are solid scaffolding** *(your call)*: each is a solid, effectively weightless beam from the body to its orb. Stretched people are spiky pieces others land on. Limbs collide but aren't sticky; only orbs are.
 - **Short until pressed:** every limb and the neck are **short stubs by default**. **Hold the key and that one stretches out**, about 5× longer for arms. Release and it pulls back in. The stretch is motor-driven and force-capped, so it has a little give.
-- **Shapes:** four limbs plus the neck give **32 shapes**, and freezing on contact locks in whichever you're holding. Strategy is choosing the shape and timing the landing.
-- **Air control while hanging or falling:**
+- **Shapes:** four limbs plus the neck give **32 shapes**. Whatever you're holding when you lock is your shape in the tower. Strategy is the shape, where you pin, and where you swing your second point.
+- **Air control while falling:**
   - **rotate** slowly (I/O or W/E)
   - **drift** sideways (U/P or Q/R)
 
-  Both have capped speeds, so they nudge the landing rather than letting you fly.
+  Both have capped speeds, so they nudge the landing rather than letting you fly. **Once you're pinned, I/O drive the hinge instead** (§10).
 - **States:**
   - **live**: body and orbs on their joints
   - **frozen**: merged into **one rigid body**, momentum preserved, so a 50-person tower is about 50 bodies
   - `unfreeze()` splits them back apart, keeping the motion
-- **Only the orbs are sticky.** A head, hand, or foot touching another person bonds; body-to-body just collides.
+- **Only the orbs are sticky.** A touch sticks only if a head, hand, or foot orb is involved on either side. Body-to-body, body-to-limb, and limb-to-limb just collide.
 - **Controls:**
 
   | | ← drift | ↺ rotate | ↻ rotate | drift → | L arm | L leg | R leg | R arm | Neck |
@@ -498,10 +500,10 @@ export default {
 
 ### The round
 
-1. **Start.** The streamer's guy stands in the middle of the ground with his arms up.
+1. **Start.** The streamer's guy stands in the middle of the ground in a **T-pose**.
 2. **Join.** Viewers join by `!join` (or `drop` when it isn't their turn), by the website's Join button, or with a channel-point "skip the queue."
 3. **Turn.**
-   - A claw-machine crane holds the viewer's person **by the back** above the tower, limbs tucked. Live players slide the claw with U/P or Q/R.
+   - A claw-machine crane holds the viewer's person **by the back** above the tower, limbs tucked. Live players slide the claw with U/P (Q/R), turn it with I/O (W/E), set their shape with the limb keys, and drop with **Space**. The turn timer starts when they leave the claw.
    - A name tag and a countdown show above it; turn length is a setting, default 3 s.
    - **"UP NEXT: @name"** shows one turn ahead.
 4. **Drop.**
@@ -509,14 +511,29 @@ export default {
    - **Website and hotseat players extend and tuck limbs and slowly rotate** (I/O or W/E) while hanging and all the way down.
    - **Chat players** can add a shape and an angle: `drop star`, `drop jl 90`, `drop ball -45`. The body holds that shape, and the claw turns to that angle before letting go.
    - If the window runs out, it drops as a tucked ball.
-5. **Contact = freeze.**
-   - On first touch, the body freezes in its pose, merges into one body, and is **welded where it touched**.
-   - The soft weld wobbles. Landing on the low side counterweights a lean.
+5. **One sticky touch = PINNED (a hinge).** *(Your rule: one point isn't enough to hold you.)*
+   - The first touch with an orb involved (yours or the tower's) pins that point to the tower as a hinge.
+   - **Sticky catch:** the grab stops your motion relative to what you grabbed, so you stay at the angle you landed.
+   - **While it's your turn:**
+     - a controller on your body holds that angle against gravity
+     - **I/O (W/E) swing you around the pin**, counter-clockwise or clockwise
+     - your limb keys still stretch and tuck, to reach
+
+     Pull yourself in by letting go of the pinned limb's key.
+   - Body or limbs touching without an orb just collide; that's what stops a swing.
+   - **When your turn ends while you're still pinned,** you let go of every key and **dangle** under gravity. You usually swing into a second point by yourself.
+6. **Second sticky touch = LOCKED.**
+   - A second orb touch by a **different body part**, at least 0.25 × your size from the pin, locks you: frozen rigid and **welded at both points**.
+   - Touches are re-checked every step while they last, so a foot already resting on something counts as soon as it qualifies.
+   - **Landing in a crook that touches two orbs at once** locks you immediately.
+   - The two points set the bond's width: wider is stronger against bending.
    - The player gets credit for the height they added ("+2.4 m @bob").
-   - **From then on their limbs and head are sticky.** If the tower sways and one landed person's limb touches another's, they **bond** at that spot (see "Sticky bonds" below). The tower turns from a chain into a web.
-6. **Miss.** Hitting the ground first shows **MISSED**; the ragdoll lies there and fades out.
-7. **Balance.** The streamer moves with ← / →, holding Shift for fine control. The tower is a broom balanced on a hand.
-8. **Collapse.**
+   - **From then on your orbs bond to any locked person they touch** (see "Sticky bonds" below), turning the tower from a chain into a web.
+   - A step-by-step filmstrip of one drop is in `spikes/phase0/story.jpg` (`?mode=story` in the viewer).
+   - **Single-player / hotseat** *(your call)*: Tetris-style. Viewers come one after another on the claw; you play each one. Once it locks, the next is on the claw. Playable now in the Phase 0 viewer: `npm run phase0:viewer`, then `?mode=play`.
+7. **Miss.** Hitting the ground first shows **MISSED**; the ragdoll lies there and fades out.
+8. **Balance.** The streamer moves with ← / →, holding Shift for fine control. The tower is a broom balanced on a hand.
+9. **Collapse.**
    - Trigger: leaning more than about 55° for over 0.4 s.
    - Everything unfreezes and **rag dolls**.
    - Then: slow-mo, shake, final height, **NEW RECORD**, and an optional auto-clip. A new round starts after about 6 s.
@@ -1075,3 +1092,5 @@ Later, before advertising big rooms: fan-out shards and a 10k simulated-viewer l
 17. **How tall should a good tower get?** Current tuning tops out around 13–22 m. → **Decide in Phase 4 playtesting.** The knobs are bond stiffness, tension limit, and bond width.
 18. ~~Node version~~ → **Upgraded to Node 26.11** (Homebrew). *(Decided by you; done.)*
 19. **Report the box2d3-wasm zero-density bug upstream?** → **Recommended**, with a minimal repro. It's public, so it needs your OK.
+20. **Viewer turn length vs. the hinge phase.** Today: up to 9 s from drop to lock, then you dangle. → **Keep for now;** the turn-length setting (§0) covers it.
+21. **Should a dangler (pinned by one point, turn over) count toward height?** → **No:** only locked people count.

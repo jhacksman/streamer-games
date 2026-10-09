@@ -31,7 +31,7 @@ describe.each(['planck', 'box2d3-compat'] as BackendName[])('%s phase 0 gates', 
 
   it('a 20-drop tower runs with no NaN or blow-ups', async () => {
     const p = await createPhysics(name);
-    const m = new TowerSim(p, { seed: 1, drops: 20, placement: 'random', aim: true, limits: LIMITS }).run();
+    const m = new TowerSim(p, { seed: 1, drops: 20, bot: 'player', limits: LIMITS }).run();
     p.dispose();
     expect(m.nan).toBe(false);
     expect(m.blowup).toBe(false);

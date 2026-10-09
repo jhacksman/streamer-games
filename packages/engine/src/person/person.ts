@@ -1,8 +1,12 @@
-// The person shared by every game: a stumpy little human whose head, hands and feet are sticky
-// orbs on stretchy limbs. Five joints total, one per limb: holding a limb's key stretches it out
-// along a fixed direction; letting go pulls it back in. Limbs are solid, weightless beams
-// (scaffolding others can land on and stick to). While live (hanging or falling) the person can
-// also slowly rotate and drift sideways.
+// The person shared by every game: a stumpy little human with a round body whose head, hands
+// and feet are sticky orbs on stretchy limbs. Five joints total, one per limb.
+//
+// - Limbs and neck are short stubs by default. Holding a limb's key stretches it straight out;
+//   letting go pulls it back in. Nothing is extended unless its key is held.
+// - Limbs are solid, effectively weightless beams (scaffolding others can land on).
+// - People come in sizes: the host (streamer) is scale 1, viewers are scale 0.5.
+// - While falling, rotate/drift keys give a little air control. Once pinned to the tower by one
+//   orb, the game turns air control off and drives the pin as a hinge instead.
 //
 // Front view, +y up, person frame origin at the body's center.
 import type { BodyHandle, Filter, JointHandle, Physics, ShapeGeom, ShapeHandle, Transform, Vec2 } from '../physics/types.ts';
@@ -11,9 +15,18 @@ export type PartName = 'body' | 'head' | 'handL' | 'handR' | 'footL' | 'footR';
 export type PartKind = 'body' | 'orb' | 'limb';
 export type LimbKey = 'armL' | 'legL' | 'legR' | 'armR' | 'neck';
 
-/** Bit per stretchable limb; a person's limb state is a 5-bit mask. */
+/** Bit per stretchable limb; a person's limb state is a 5-bit mask of keys held. */
 export const LIMB_BITS: Record<LimbKey, number> = { armL: 1, legL: 2, legR: 4, armR: 8, neck: 16 };
 export const ALL_LIMBS = 31;
+
+/** Default keys (right-hand layout) for display: limbs, rotate, drift. */
+export const KEY_LABELS = {
+  limbs: { armL: 'J', legL: 'K', legR: 'L', armR: ';', neck: ',' } as Record<LimbKey, string>,
+  rotateCCW: 'I',
+  rotateCW: 'O',
+  driftLeft: 'U',
+  driftRight: 'P',
+};
 
 export interface PartTag {
   personId: number;
@@ -29,7 +42,7 @@ export interface LimbSpec {
   root: Vec2;
   /** Default direction in the body frame (radians, CCW from +x). */
   angle: number;
-  /** Root-to-orb-center distance when fully tucked. */
+  /** Root-to-orb-center distance when tucked (the stub). */
   tucked: number;
   /** Extra length when fully stretched. */
   reach: number;
@@ -39,25 +52,70 @@ export interface LimbSpec {
   maxForce: number;
 }
 
+export interface PersonSpec {
+  scale: number;
+  /** Round body: an 8-sided ellipse with these radii. */
+  bodyRx: number;
+  bodyRy: number;
+  body: ShapeGeom;
+  limbs: readonly LimbSpec[];
+}
+
 const DEG = Math.PI / 180;
 
-export const PERSON_DENSITY = 160; // ~70 kg person
-export const BODY_GEOM: ShapeGeom = { kind: 'box', hx: 0.2, hy: 0.27 };
+export const PERSON_DENSITY = 187; // host (scale 1) ≈ 70 kg, viewer (scale 0.5) ≈ 17 kg
+const BODY_RX = 0.22;
+const BODY_RY = 0.27;
 
+/** Full-size (scale 1) limbs. Use `specFor(scale).limbs` for a given person. */
 export const LIMBS: readonly LimbSpec[] = [
   { name: 'neck', orb: 'head', root: { x: 0, y: 0.25 }, angle: 90 * DEG, tucked: 0.2, reach: 0.35, radius: 0.17, thickness: 0.15, maxForce: 2500 },
-  { name: 'armL', orb: 'handL', root: { x: -0.17, y: 0.16 }, angle: 160 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, thickness: 0.16, maxForce: 1500 },
-  { name: 'armR', orb: 'handR', root: { x: 0.17, y: 0.16 }, angle: 20 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, thickness: 0.16, maxForce: 1500 },
-  { name: 'legL', orb: 'footL', root: { x: -0.1, y: -0.25 }, angle: 250 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, thickness: 0.2, maxForce: 2500 },
-  { name: 'legR', orb: 'footR', root: { x: 0.1, y: -0.25 }, angle: 290 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, thickness: 0.2, maxForce: 2500 },
+  { name: 'armL', orb: 'handL', root: { x: -0.19, y: 0.1 }, angle: 160 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, thickness: 0.16, maxForce: 1500 },
+  { name: 'armR', orb: 'handR', root: { x: 0.19, y: 0.1 }, angle: 20 * DEG, tucked: 0.14, reach: 0.55, radius: 0.09, thickness: 0.16, maxForce: 1500 },
+  { name: 'legL', orb: 'footL', root: { x: -0.1, y: -0.24 }, angle: 250 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, thickness: 0.2, maxForce: 2500 },
+  { name: 'legR', orb: 'footR', root: { x: 0.1, y: -0.24 }, angle: 290 * DEG, tucked: 0.14, reach: 0.6, radius: 0.1, thickness: 0.2, maxForce: 2500 },
 ];
 
-const LIMB_BY_NAME = new Map(LIMBS.map((l) => [l.name, l]));
-export const limbSpec = (n: LimbKey) => LIMB_BY_NAME.get(n)!;
+/** An 8-sided ellipse with flat top and bottom (Box2D polygons max out at 8 vertices). */
+function ellipsePolygon(rx: number, ry: number): ShapeGeom {
+  const vertices: Vec2[] = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i + 0.5) * (Math.PI / 4);
+    vertices.push({ x: rx * Math.cos(a), y: ry * Math.sin(a) });
+  }
+  return { kind: 'polygon', vertices };
+}
+
+const specs = new Map<number, PersonSpec>();
+
+/** Body and limb dimensions for a person of a given size. Mass scales with scale². */
+export function specFor(scale = 1): PersonSpec {
+  let s = specs.get(scale);
+  if (!s) {
+    const k = scale;
+    s = {
+      scale,
+      bodyRx: BODY_RX * k,
+      bodyRy: BODY_RY * k,
+      body: ellipsePolygon(BODY_RX * k, BODY_RY * k),
+      limbs: LIMBS.map((l) => ({
+        ...l,
+        root: { x: l.root.x * k, y: l.root.y * k },
+        tucked: l.tucked * k,
+        reach: l.reach * k,
+        radius: l.radius * k,
+        thickness: l.thickness * k,
+        maxForce: l.maxForce * k * k,
+      })),
+    };
+    specs.set(scale, s);
+  }
+  return s;
+}
 
 /**
  * Named whole-body poses: limb -> stretch fraction (0 tucked .. 1 full), plus optional limb
- * direction overrides (e.g. the streamer's arms point straight up).
+ * direction overrides. Poses are for posed people (the streamer, tests); viewers use keys.
  */
 export interface Pose {
   stretch?: Partial<Record<LimbKey, number>>;
@@ -65,7 +123,7 @@ export interface Pose {
 }
 
 export const POSES = {
-  /** The streamer: T-pose, arms straight out sideways, legs planted. Three wide landing spots. */
+  /** The streamer: T-pose, arms straight out sideways, legs planted. */
   tPose: { stretch: { neck: 0.3, armL: 1, armR: 1, legL: 1, legR: 1 }, angles: { armL: 180 * DEG, armR: 0, legL: 262 * DEG, legR: 278 * DEG } },
   /** Arms straight up, legs planted, head up a little. */
   armsUp: { stretch: { neck: 0.3, armL: 1, armR: 1, legL: 1, legR: 1 }, angles: { armL: 100 * DEG, armR: 80 * DEG, legL: 262 * DEG, legR: 278 * DEG } },
@@ -73,7 +131,7 @@ export const POSES = {
   standing: { stretch: { neck: 1, armL: 0, armR: 0, legL: 1, legR: 1 }, angles: { legL: 265 * DEG, legR: 275 * DEG } },
 } satisfies Record<string, Pose>;
 
-/** Live steering while hanging/falling: -1, 0 or 1 on each axis. */
+/** Live steering: -1, 0 or 1 on each axis. */
 export interface Drive {
   /** -1 = counter-clockwise (I / W), +1 = clockwise (O / E). */
   rotate: number;
@@ -85,14 +143,16 @@ export interface PersonOptions {
   id: number;
   position: Vec2;
   angle?: number;
-  /** Stretched limbs (LIMB_BITS mask). A pose's stretch values take priority. */
+  /** Size: 1 = host (streamer), 0.5 = viewer. */
+  scale?: number;
+  /** Limb keys held (LIMB_BITS mask). Default 0: everything tucked. */
   limbs?: number;
   pose?: Pose;
   filter: { category: number; mask: number };
   contactEvents?: boolean;
   linearVelocity?: Vec2;
   angularVelocity?: number;
-  /** Stretch motor gain (1/s) and speed cap (m/s). */
+  /** Stretch motor gain (1/s) and speed cap (m/s at scale 1). */
   motorGain?: number;
   motorMaxSpeed?: number;
   /** Multiplies every limb's motor force. */
@@ -109,32 +169,39 @@ const rot = (v: Vec2, a: number): Vec2 => {
 };
 const add = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x + b.x, y: a.y + b.y });
 const sub = (a: Vec2, b: Vec2): Vec2 => ({ x: a.x - b.x, y: a.y - b.y });
-const scale = (v: Vec2, k: number): Vec2 => ({ x: v.x * k, y: v.y * k });
+const mul = (v: Vec2, k: number): Vec2 => ({ x: v.x * k, y: v.y * k });
 const dirOf = (a: number): Vec2 => ({ x: Math.cos(a), y: Math.sin(a) });
 
 function geomArea(g: ShapeGeom): number {
   if (g.kind === 'box') return 4 * g.hx * g.hy;
   if (g.kind === 'circle') return Math.PI * g.radius * g.radius;
-  return 0;
+  let a = 0;
+  for (let i = 0; i < g.vertices.length; i++) {
+    const p = g.vertices[i]!;
+    const q = g.vertices[(i + 1) % g.vertices.length]!;
+    a += p.x * q.y - q.x * p.y;
+  }
+  return Math.abs(a) / 2;
 }
 
-/** Rotational inertia about the shape's own center, per unit density. */
+/** Rotational inertia about the shape's own origin, per unit density. */
 function geomInertia(g: ShapeGeom): number {
   if (g.kind === 'box') return (4 * g.hx * g.hy * (4 * g.hx * g.hx + 4 * g.hy * g.hy)) / 12;
   if (g.kind === 'circle') return (Math.PI * g.radius ** 4) / 2;
-  return 0;
-}
-
-export function partGeom(part: PartName): ShapeGeom {
-  if (part === 'body') return BODY_GEOM;
-  const limb = LIMBS.find((l) => l.orb === part)!;
-  return { kind: 'circle', radius: limb.radius };
+  let num = 0;
+  for (let i = 0; i < g.vertices.length; i++) {
+    const p = g.vertices[i]!;
+    const q = g.vertices[(i + 1) % g.vertices.length]!;
+    const cross = Math.abs(p.x * q.y - q.x * p.y);
+    num += cross * (p.x * p.x + p.x * q.x + q.x * q.x + p.y * p.y + p.y * q.y + q.y * q.y);
+  }
+  return num / 12;
 }
 
 /** A limb beam from `from` to `to` (same frame), as a box; null if too short to matter. */
 function beamGeom(from: Vec2, to: Vec2, thickness: number): ShapeGeom | null {
   const len = Math.hypot(to.x - from.x, to.y - from.y);
-  if (len < 0.02) return null;
+  if (len < 0.01) return null;
   return { kind: 'box', hx: len / 2, hy: thickness / 2, center: { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }, angle: Math.atan2(to.y - from.y, to.x - from.x) };
 }
 
@@ -145,7 +212,7 @@ function beamGeom(from: Vec2, to: Vec2, thickness: number): ShapeGeom | null {
  */
 const LIMB_DENSITY = 1e-3;
 
-/** Rebuild a limb beam once its length drifts this far from the shape (meters). */
+/** Rebuild a limb beam once its length drifts this far from the shape (fraction of scale, m). */
 const LIMB_REBUILD = 0.03;
 
 function transformGeom(g: ShapeGeom, t: Transform): ShapeGeom {
@@ -156,10 +223,10 @@ function transformGeom(g: ShapeGeom, t: Transform): ShapeGeom {
   return { kind: 'polygon', vertices: g.vertices.map((v) => add({ x: t.x, y: t.y }, rot(v, t.angle))) };
 }
 
-/** Stretch target (meters of extension) per limb for a mask and optional pose. */
-export function targetsFor(limbs: number, pose?: Pose): Record<LimbKey, number> {
+/** Stretch target (meters of extension) per limb for a key mask and optional pose. */
+export function targetsFor(limbs: number, pose?: Pose, spec: PersonSpec = specFor(1)): Record<LimbKey, number> {
   const out = {} as Record<LimbKey, number>;
-  for (const l of LIMBS) {
+  for (const l of spec.limbs) {
     const fixed = pose?.stretch?.[l.name];
     const frac = fixed !== undefined ? fixed : limbs & LIMB_BITS[l.name] ? 1 : 0;
     out[l.name] = frac * l.reach;
@@ -168,18 +235,18 @@ export function targetsFor(limbs: number, pose?: Pose): Record<LimbKey, number> 
 }
 
 /** Limb directions (body frame) for a pose. */
-export function anglesFor(pose?: Pose): Record<LimbKey, number> {
+export function anglesFor(pose?: Pose, spec: PersonSpec = specFor(1)): Record<LimbKey, number> {
   const out = {} as Record<LimbKey, number>;
-  for (const l of LIMBS) out[l.name] = pose?.angles?.[l.name] ?? l.angle;
+  for (const l of spec.limbs) out[l.name] = pose?.angles?.[l.name] ?? l.angle;
   return out;
 }
 
 /** World transforms of every part for a body transform, stretch and limb angles. */
-export function poseTransforms(origin: Transform, stretch: Record<LimbKey, number>, angles: Record<LimbKey, number>): Map<PartName, Transform> {
+export function poseTransforms(origin: Transform, stretch: Record<LimbKey, number>, angles: Record<LimbKey, number>, spec: PersonSpec = specFor(1)): Map<PartName, Transform> {
   const out = new Map<PartName, Transform>();
   out.set('body', { ...origin });
-  for (const l of LIMBS) {
-    const local = add(l.root, scale(dirOf(angles[l.name]), l.tucked + stretch[l.name]));
+  for (const l of spec.limbs) {
+    const local = add(l.root, mul(dirOf(angles[l.name]), l.tucked + stretch[l.name]));
     const w = add({ x: origin.x, y: origin.y }, rot(local, origin.angle));
     out.set(l.orb, { x: w.x, y: w.y, angle: origin.angle });
   }
@@ -190,10 +257,15 @@ export class Person {
   readonly id: number;
   readonly physics: Physics;
   readonly group: number;
+  readonly scale: number;
+  readonly spec: PersonSpec;
   state: 'ragdoll' | 'frozen' = 'ragdoll';
+  /** Limb keys currently held (LIMB_BITS mask). */
   limbs: number;
   pose: Pose | undefined;
   drive: Drive = { rotate: 0, drift: 0 };
+  /** Air control (drift + rotate impulses). The game turns it off once the person is pinned. */
+  airControl = true;
   /** Limb directions in the body frame (fixed for this person's life). */
   readonly angles: Record<LimbKey, number>;
   filter: { category: number; mask: number };
@@ -219,23 +291,39 @@ export class Person {
     this.physics = physics;
     this.id = o.id;
     this.group = -(1 + (o.id % 30000));
+    this.scale = o.scale ?? 1;
+    this.spec = specFor(this.scale);
     this.limbs = o.limbs ?? 0;
     this.pose = o.pose;
-    this.angles = anglesFor(o.pose);
+    this.angles = anglesFor(o.pose, this.spec);
     this.filter = o.filter;
     this.contactEvents = o.contactEvents ?? true;
     this.motorGain = o.motorGain ?? 12;
-    this.motorMaxSpeed = o.motorMaxSpeed ?? 4;
+    this.motorMaxSpeed = (o.motorMaxSpeed ?? 4) * this.scale;
     this.strength = o.strength ?? 1;
     this.driftSpeed = o.driftSpeed ?? 2.5;
     this.rotateSpeed = o.rotateSpeed ?? 1.6;
-    const frames = poseTransforms({ x: o.position.x, y: o.position.y, angle: o.angle ?? 0 }, targetsFor(this.limbs, this.pose), this.angles);
+    const frames = poseTransforms({ x: o.position.x, y: o.position.y, angle: o.angle ?? 0 }, targetsFor(this.limbs, this.pose, this.spec), this.angles, this.spec);
     const w = o.angularVelocity ?? 0;
     this.buildLive(frames, (at) => ({
       vx: (o.linearVelocity?.x ?? 0) - w * (at.y - o.position.y),
       vy: (o.linearVelocity?.y ?? 0) + w * (at.x - o.position.x),
       w,
     }));
+  }
+
+  limb(name: LimbKey): LimbSpec {
+    return this.spec.limbs.find((l) => l.name === name)!;
+  }
+
+  partGeom(part: PartName): ShapeGeom {
+    if (part === 'body') return this.spec.body;
+    const l = this.spec.limbs.find((x) => x.orb === part)!;
+    return { kind: 'circle', radius: l.radius };
+  }
+
+  mass(): number {
+    return personMass(this.scale);
   }
 
   private tag(part: PartName): PartTag {
@@ -256,7 +344,7 @@ export class Person {
     if (orb === undefined) return;
     // The orb keeps the body's orientation (the stretch joint locks rotation), so in the orb's
     // frame the root lies straight back along the limb direction.
-    const back = scale(dirOf(this.angles[l.name]), -length);
+    const back = mul(dirOf(this.angles[l.name]), -length);
     const geom = beamGeom({ x: 0, y: 0 }, back, l.thickness);
     if (!geom) return;
     const shape = p.addShape(orb, geom, { density: LIMB_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.limbTag(l.name) });
@@ -273,19 +361,19 @@ export class Person {
       const t = frames.get(part)!;
       const v = velocityAt(t);
       const b = p.createBody({ type: 'dynamic', position: { x: t.x, y: t.y }, angle: t.angle, linearVelocity: { x: v.vx, y: v.vy }, angularVelocity: v.w, tag: this.tag(part) });
-      p.addShape(b, partGeom(part), { density: PERSON_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.tag(part) });
+      p.addShape(b, this.partGeom(part), { density: PERSON_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.tag(part) });
       this.parts.set(part, b);
       return b;
     };
     const body = make('body');
     const bt = frames.get('body')!;
-    for (const l of LIMBS) {
+    for (const l of this.spec.limbs) {
       const orb = make(l.orb);
       const ot = frames.get(l.orb)!;
       const dir = rot(dirOf(this.angles[l.name]), bt.angle);
       const root = add({ x: bt.x, y: bt.y }, rot(l.root, bt.angle));
       // anchorB = the orb point that sits on the root when tucked, so translation = stretch.
-      const anchorB = sub({ x: ot.x, y: ot.y }, scale(dir, l.tucked));
+      const anchorB = sub({ x: ot.x, y: ot.y }, mul(dir, l.tucked));
       this.joints.set(l.name, p.createPrismatic({
         bodyA: body, bodyB: orb, anchor: root, anchorB, axis: dir,
         limits: { lower: 0, upper: l.reach }, motor: { speed: 0, maxForce: l.maxForce * this.strength },
@@ -295,12 +383,12 @@ export class Person {
     }
   }
 
-  /** Drive limb motors and air control. Call once per step while live. */
+  /** Drive limb motors toward the held keys, plus air control if enabled. Call once per step. */
   update() {
     if (this.state !== 'ragdoll') return;
     const p = this.physics;
-    const targets = targetsFor(this.limbs, this.pose);
-    for (const l of LIMBS) {
+    const targets = targetsFor(this.limbs, this.pose, this.spec);
+    for (const l of this.spec.limbs) {
       const h = this.joints.get(l.name);
       if (h === undefined || !p.jointExists(h)) continue;
       const stretch = p.jointTranslation(h);
@@ -309,15 +397,14 @@ export class Person {
       // Keep the solid beam matched to the limb's current length.
       const length = l.tucked + Math.max(0, stretch);
       const beam = this.limbBeams.get(l.name);
-      if (!beam || Math.abs(beam.length - length) > LIMB_REBUILD) this.buildLimbBeam(l, length);
+      if (!beam || Math.abs(beam.length - length) > LIMB_REBUILD * this.scale) this.buildLimbBeam(l, length);
     }
+    if (!this.airControl) return;
     // Air control: nudge the whole person toward a capped sideways speed and spin rate.
     const body = this.parts.get('body')!;
     const v = p.getVelocity(body);
-    const mass = personMass();
-    const targetVx = this.drive.drift * this.driftSpeed;
     if (this.drive.drift !== 0) {
-      const dv = Math.max(-0.2, Math.min(0.2, targetVx - v.vx));
+      const dv = Math.max(-0.2, Math.min(0.2, this.drive.drift * this.driftSpeed - v.vx));
       for (const b of this.parts.values()) p.applyLinearImpulse(b, { x: dv * p.getMass(b), y: 0 });
     }
     if (this.drive.rotate !== 0) {
@@ -330,13 +417,12 @@ export class Person {
         const m = p.getMass(b);
         p.applyLinearImpulse(b, { x: -dw * (pc.y - c.y) * m, y: dw * (pc.x - c.x) * m });
       }
-      p.applyAngularImpulse(body, dw * mass * 0.02);
     }
   }
 
   /** Current stretch of a limb (meters), live or frozen. */
   stretch(limb: LimbKey): number {
-    const l = limbSpec(limb);
+    const l = this.limb(limb);
     if (this.state === 'ragdoll') {
       const h = this.joints.get(limb);
       return h !== undefined && this.physics.jointExists(h) ? this.physics.jointTranslation(h) : 0;
@@ -349,9 +435,9 @@ export class Person {
 
   /** Go limp (motors nearly off) or restore strength. */
   setLimp(limp: boolean) {
-    for (const l of LIMBS) {
+    for (const l of this.spec.limbs) {
       const h = this.joints.get(l.name);
-      if (h !== undefined && this.physics.jointExists(h)) this.physics.setMotorMax(h, limp ? 20 : l.maxForce * this.strength);
+      if (h !== undefined && this.physics.jointExists(h)) this.physics.setMotorMax(h, limp ? 20 * this.scale * this.scale : l.maxForce * this.strength);
     }
   }
 
@@ -384,7 +470,7 @@ export class Person {
   /** Where a limb leaves the body, in world space. */
   limbRoot(limb: LimbKey): Vec2 {
     const t = this.bodyTransform();
-    return add({ x: t.x, y: t.y }, rot(limbSpec(limb).root, t.angle));
+    return add({ x: t.x, y: t.y }, rot(this.limb(limb).root, t.angle));
   }
 
   /** Merge body and orbs into one rigid body at the current pose. Momentum is preserved. */
@@ -396,7 +482,7 @@ export class Person {
     let mass = 0, px = 0, py = 0, cx = 0, cy = 0;
     const info: { m: number; c: Vec2; v: { vx: number; vy: number; w: number }; i: number }[] = [];
     for (const [part, b] of this.parts) {
-      const g = partGeom(part);
+      const g = this.partGeom(part);
       const m = PERSON_DENSITY * geomArea(g);
       const c = p.getWorldCenter(b);
       const v = p.getVelocity(b);
@@ -426,12 +512,12 @@ export class Person {
 
     const body = p.createBody({ type: 'dynamic', position: { x: bt.x, y: bt.y }, angle: bt.angle, tag: { personId: this.id, frozen: true } });
     for (const [part, frame] of this.frozenFrames) {
-      p.addShape(body, transformGeom(partGeom(part), frame), {
+      p.addShape(body, transformGeom(this.partGeom(part), frame), {
         density: PERSON_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.tag(part),
       });
     }
     // Solid, weightless limb beams: the scaffolding other people land on and stick to.
-    for (const l of LIMBS) {
+    for (const l of this.spec.limbs) {
       const orb = this.frozenFrames.get(l.orb);
       const geom = orb ? beamGeom(l.root, { x: orb.x, y: orb.y }, l.thickness) : null;
       if (geom) p.addShape(body, geom, { density: LIMB_DENSITY, friction: 0.9, filter: this.shapeFilter(), contactEvents: this.contactEvents, tag: this.limbTag(l.name) });
@@ -482,11 +568,13 @@ export class Person {
       if (g.kind === 'circle') {
         const c = add({ x: t.x, y: t.y }, rot(g.center ?? { x: 0, y: 0 }, t.angle));
         if (c.y + g.radius > best.y) best = { x: c.x, y: c.y + g.radius };
-      } else if (g.kind === 'box') {
-        const c = g.center ?? { x: 0, y: 0 };
-        for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) {
-          const corner = add({ x: t.x, y: t.y }, rot(add(c, rot({ x: sx * g.hx, y: sy * g.hy }, g.angle ?? 0)), t.angle));
-          if (corner.y > best.y) best = corner;
+      } else {
+        const corners: Vec2[] = g.kind === 'box'
+          ? ([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sy]) => add(g.center ?? { x: 0, y: 0 }, rot({ x: sx * g.hx, y: sy * g.hy }, g.angle ?? 0)))
+          : g.vertices;
+        for (const c of corners) {
+          const w = add({ x: t.x, y: t.y }, rot(c, t.angle));
+          if (w.y > best.y) best = w;
         }
       }
     }
@@ -502,15 +590,19 @@ export class Person {
   }
 }
 
-export const personMass = () =>
-  PERSON_DENSITY * (geomArea(BODY_GEOM) + LIMBS.reduce((m, l) => m + Math.PI * l.radius * l.radius, 0));
+/** Total mass of a person of a given size (body + five orbs; beams are weightless). */
+export function personMass(scale = 1): number {
+  const s = specFor(scale);
+  return PERSON_DENSITY * (geomArea(s.body) + s.limbs.reduce((m, l) => m + Math.PI * l.radius * l.radius, 0));
+}
 
 /** Lowest (feet) and highest (head) points of a pose, relative to the body center. */
-export function poseExtent(pose: Pose, limbs = 0): { bottom: number; top: number } {
-  const frames = poseTransforms({ x: 0, y: 0, angle: 0 }, targetsFor(limbs, pose), anglesFor(pose));
-  let bottom = -(BODY_GEOM.kind === 'box' ? BODY_GEOM.hy : 0);
-  let top = -bottom;
-  for (const l of LIMBS) {
+export function poseExtent(pose: Pose, limbs = 0, scale = 1): { bottom: number; top: number } {
+  const spec = specFor(scale);
+  const frames = poseTransforms({ x: 0, y: 0, angle: 0 }, targetsFor(limbs, pose, spec), anglesFor(pose, spec), spec);
+  let bottom = -spec.bodyRy;
+  let top = spec.bodyRy;
+  for (const l of spec.limbs) {
     const f = frames.get(l.orb)!;
     bottom = Math.min(bottom, f.y - l.radius);
     top = Math.max(top, f.y + l.radius);

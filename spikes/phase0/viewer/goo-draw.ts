@@ -78,7 +78,7 @@ function orb(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, fil
 
 export function drawGooPerson(ctx: CanvasRenderingContext2D, _p: Physics, person: Person, view: View, style: GooStyle) {
   const s = view.scale;
-  const lw = Math.max(1, 0.018 * s);
+  const lw = Math.max(1, 0.018 * s * person.scale);
   const skinBase = style.limp ? '#9ca3af' : style.skin ?? skinFor(person.id);
   const stress = style.stress && style.stress > 0.3 ? (style.stress - 0.3) / 0.7 : 0;
   const skin = stress > 0 ? mix(skinBase, '#ff3030', stress * 0.8) : skinBase;
@@ -87,7 +87,7 @@ export function drawGooPerson(ctx: CanvasRenderingContext2D, _p: Physics, person
   const P = (v: { x: number; y: number }) => ({ x: view.toX(v.x), y: view.toY(v.y) });
 
   const drawLimb = (name: LimbKey) => {
-    const l = LIMBS.find((x) => x.name === name)!;
+    const l = person.limb(name);
     const width = l.thickness; // drawn exactly as wide as the solid physics beam
     const a = P(person.limbRoot(name));
     const b = P(person.partPosition(l.orb));
@@ -101,52 +101,34 @@ export function drawGooPerson(ctx: CanvasRenderingContext2D, _p: Physics, person
   const feet = [drawLimb('legL'), drawLimb('legR')];
   for (const f of feet) orb(ctx, f.b.x, f.b.y, f.r, skin, lw);
 
-  // torso: broad-shouldered, chunky, wearing shorts
+  // torso: a round, chunky body (the physics shape is an 8-sided ellipse of these radii), in shorts
   ctx.save();
   ctx.translate(view.toX(bt.x), view.toY(bt.y));
   ctx.rotate(-bt.angle);
-  const sh = 0.25 * s; // half shoulder width
-  const hp = 0.19 * s; // half hip width
-  const top = -0.27 * s;
-  const bot = 0.27 * s;
+  const rx = person.spec.bodyRx * s;
+  const ry = person.spec.bodyRy * s;
   ctx.beginPath();
-  ctx.moveTo(-sh + 0.06 * s, top);
-  ctx.quadraticCurveTo(0, top - 0.05 * s, sh - 0.06 * s, top);
-  ctx.quadraticCurveTo(sh + 0.02 * s, top + 0.02 * s, sh - 0.01 * s, top + 0.14 * s);
-  ctx.quadraticCurveTo(hp + 0.04 * s, 0.05 * s, hp, bot - 0.06 * s);
-  ctx.quadraticCurveTo(hp, bot, hp - 0.07 * s, bot);
-  ctx.lineTo(-hp + 0.07 * s, bot);
-  ctx.quadraticCurveTo(-hp, bot, -hp, bot - 0.06 * s);
-  ctx.quadraticCurveTo(-hp - 0.04 * s, 0.05 * s, -sh + 0.01 * s, top + 0.14 * s);
-  ctx.quadraticCurveTo(-sh - 0.02 * s, top + 0.02 * s, -sh + 0.06 * s, top);
-  ctx.closePath();
-  const tg = ctx.createLinearGradient(-sh, 0, sh, 0);
-  tg.addColorStop(0, mix(skin, '#000000', 0.12));
-  tg.addColorStop(0.45, mix(skin, '#ffffff', 0.12));
-  tg.addColorStop(1, mix(skin, '#000000', 0.18));
+  ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+  const tg = ctx.createRadialGradient(-rx * 0.35, -ry * 0.4, rx * 0.1, 0, 0, Math.max(rx, ry));
+  tg.addColorStop(0, mix(skin, '#ffffff', 0.25));
+  tg.addColorStop(0.7, skin);
+  tg.addColorStop(1, mix(skin, '#000000', 0.22));
   ctx.fillStyle = tg;
   ctx.fill();
   ctx.save();
   ctx.clip();
-  // shorts
+  // shorts on the lower third
   ctx.fillStyle = shorts;
-  ctx.fillRect(-sh, 0.1 * s, 2 * sh, bot);
+  ctx.fillRect(-rx, ry * 0.3, 2 * rx, ry);
   ctx.fillStyle = 'rgba(255,255,255,0.25)';
-  ctx.fillRect(-sh, 0.1 * s, 2 * sh, 0.025 * s);
+  ctx.fillRect(-rx, ry * 0.3, 2 * rx, Math.max(1, ry * 0.08));
   ctx.restore();
   ctx.lineWidth = lw;
   ctx.strokeStyle = OUTLINE;
   ctx.stroke();
-  // pecs and belly button, for that Mount Your Friends beefiness
-  ctx.strokeStyle = mix(skin, OUTLINE, 0.45);
-  ctx.lineWidth = lw * 0.8;
+  // belly button
   ctx.beginPath();
-  ctx.arc(-0.08 * s, -0.14 * s, 0.08 * s, 0.2 * Math.PI, 0.8 * Math.PI);
-  ctx.moveTo(0.16 * s, -0.12 * s);
-  ctx.arc(0.08 * s, -0.14 * s, 0.08 * s, 0.2 * Math.PI, 0.8 * Math.PI);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(0, 0.04 * s, 0.012 * s, 0, Math.PI * 2);
+  ctx.arc(0, ry * 0.08, Math.max(1, rx * 0.06), 0, Math.PI * 2);
   ctx.fillStyle = mix(skin, OUTLINE, 0.5);
   ctx.fill();
   ctx.restore();
@@ -159,10 +141,10 @@ export function drawGooPerson(ctx: CanvasRenderingContext2D, _p: Physics, person
   const neckRoot = P(person.limbRoot('neck'));
   const hc = person.partPosition('head');
   const head = P(hc);
-  const neckSpec = LIMBS.find((l) => l.name === 'neck')!;
+  const neckSpec = person.limb('neck');
   const neckStretch = Math.max(0, Math.min(1, person.stretch('neck') / neckSpec.reach));
   limb(ctx, neckRoot.x, neckRoot.y, head.x, head.y, neckSpec.thickness * s * (1 - 0.1 * neckStretch), skin, lw);
-  const r = LIMBS.find((l) => l.orb === 'head')!.radius * s;
+  const r = person.limb('neck').radius * s;
   orb(ctx, head.x, head.y, r, skin, lw);
 
   // face
@@ -237,7 +219,7 @@ export function drawGooPerson(ctx: CanvasRenderingContext2D, _p: Physics, person
   ctx.restore();
 
   if (style.name) {
-    ctx.font = `600 ${Math.max(11, 0.16 * s)}px ui-rounded, system-ui, sans-serif`;
+    ctx.font = `600 ${Math.max(11, 0.16 * s * person.scale)}px ui-rounded, system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
     ctx.fillText(style.name, head.x, head.y - r - 0.08 * s);

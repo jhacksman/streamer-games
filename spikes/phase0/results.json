@@ -1,141 +1,156 @@
 {
   "planck": {
-    "tower_random": {
-      "landed": 47,
-      "missed": 3,
-      "towerPeopleEnd": 5,
-      "peakPeople": 8,
-      "sticky": 0,
+    "tower_player": {
+      "landed": 38,
+      "pivots": 38,
+      "missed": 2,
+      "danglers": 0,
+      "towerPeopleEnd": 18,
+      "peakPeople": 23,
+      "sticky": 11,
+      "pivotToLockSec": 0.481,
       "snaps": {
-        "twist": 8
+        "twist": 2
       },
-      "detached": 42,
+      "detached": 20,
       "collapsed": false,
-      "maxHeight": 13.237,
+      "maxHeight": 8.253,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.05,
-      "stepP95Ms": 0.147,
-      "frameAvgMs": 0.076,
-      "frameP95Ms": 0.19
+      "stepAvgMs": 0.127,
+      "stepP95Ms": 0.279,
+      "frameAvgMs": 0.457,
+      "frameP95Ms": 2.158
     },
-    "tower_straight": {
-      "landed": 45,
-      "missed": 5,
-      "towerPeopleEnd": 5,
-      "peakPeople": 9,
-      "sticky": 0,
+    "tower_passive": {
+      "landed": 39,
+      "pivots": 39,
+      "missed": 1,
+      "danglers": 0,
+      "towerPeopleEnd": 39,
+      "peakPeople": 39,
+      "sticky": 17,
+      "pivotToLockSec": 4.744,
       "snaps": {
-        "twist": 5
+        "twist": 1
       },
-      "detached": 40,
+      "detached": 0,
       "collapsed": false,
-      "maxHeight": 18.822,
+      "maxHeight": 6.57,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.025,
-      "stepP95Ms": 0.046,
-      "frameAvgMs": 0.05,
-      "frameP95Ms": 0.148
+      "stepAvgMs": 0.206,
+      "stepP95Ms": 0.366,
+      "frameAvgMs": 1.038,
+      "frameP95Ms": 5.209
     },
-    "tower_lean": {
-      "landed": 47,
-      "missed": 3,
-      "towerPeopleEnd": 4,
-      "peakPeople": 10,
-      "sticky": 0,
-      "snaps": {
-        "twist": 5
-      },
-      "detached": 43,
-      "collapsed": false,
-      "maxHeight": 18.98,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.025,
-      "stepP95Ms": 0.047,
-      "frameAvgMs": 0.051,
-      "frameP95Ms": 0.155
-    },
-    "tower_balanced": {
-      "landed": 23,
-      "missed": 27,
-      "towerPeopleEnd": 7,
-      "peakPeople": 11,
-      "sticky": 3,
-      "snaps": {
-        "twist": 4
-      },
-      "detached": 16,
-      "collapsed": false,
-      "maxHeight": 12.076,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.083,
-      "stepP95Ms": 0.216,
-      "frameAvgMs": 0.132,
-      "frameP95Ms": 0.363
-    },
-    "pile50_unbreakable": {
-      "landed": 50,
-      "missed": 0,
-      "towerPeopleEnd": 50,
-      "peakPeople": 50,
-      "sticky": 50,
+    "tower_player_springy12hz": {
+      "landed": 39,
+      "pivots": 39,
+      "missed": 1,
+      "danglers": 0,
+      "towerPeopleEnd": 39,
+      "peakPeople": 39,
+      "sticky": 36,
+      "pivotToLockSec": 0.376,
       "snaps": {},
       "detached": 0,
       "collapsed": false,
-      "maxHeight": 17.091,
+      "maxHeight": 7.541,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.191,
-      "stepP95Ms": 0.249,
-      "frameAvgMs": 0.548,
-      "frameP95Ms": 2.07
+      "stepAvgMs": 0.256,
+      "stepP95Ms": 0.405,
+      "frameAvgMs": 0.778,
+      "frameP95Ms": 3.346
+    },
+    "tower_player_balanced": {
+      "landed": 38,
+      "pivots": 38,
+      "missed": 2,
+      "danglers": 0,
+      "towerPeopleEnd": 38,
+      "peakPeople": 38,
+      "sticky": 31,
+      "pivotToLockSec": 0.491,
+      "snaps": {
+        "tension": 1,
+        "twist": 5,
+        "shear": 2
+      },
+      "detached": 0,
+      "collapsed": false,
+      "maxHeight": 7.514,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.198,
+      "stepP95Ms": 0.361,
+      "frameAvgMs": 0.707,
+      "frameP95Ms": 3.18
+    },
+    "pile40_unbreakable": {
+      "landed": 40,
+      "pivots": 40,
+      "missed": 0,
+      "danglers": 0,
+      "towerPeopleEnd": 40,
+      "peakPeople": 40,
+      "sticky": 10,
+      "pivotToLockSec": 0.503,
+      "snaps": {},
+      "detached": 0,
+      "collapsed": false,
+      "maxHeight": 8.802,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.197,
+      "stepP95Ms": 0.348,
+      "frameAvgMs": 0.916,
+      "frameP95Ms": 4.598
     },
     "column50_straight_rigid": {
       "standing": 50,
       "of": 50,
       "snaps": 0,
-      "bottomCompression": 34220,
-      "expectedCompression": 33641,
+      "bottomCompression": 35431,
+      "expectedCompression": 34831,
       "topSag": 0.033,
       "nan": false,
-      "stepAvgMs": 0.089,
-      "stepP95Ms": 0.146
+      "stepAvgMs": 0.095,
+      "stepP95Ms": 0.177
     },
     "column50_straight_soft12hz": {
       "standing": 2,
       "of": 50,
       "snaps": 0,
-      "bottomCompression": 10427,
-      "expectedCompression": 33641,
-      "topSag": 16.12,
+      "bottomCompression": 9780,
+      "expectedCompression": 34831,
+      "topSag": 9.392,
       "nan": false,
-      "stepAvgMs": 0.137,
-      "stepP95Ms": 0.34
+      "stepAvgMs": 0.139,
+      "stepP95Ms": 0.297
     },
     "column50_lean12cm": {
       "standing": 1,
       "of": 50,
-      "snaps": 33,
+      "snaps": 37,
       "bottomCompression": null,
-      "expectedCompression": 33641,
-      "topSag": 100.358,
+      "expectedCompression": 34831,
+      "topSag": 98.205,
       "nan": false,
-      "stepAvgMs": 0.343,
-      "stepP95Ms": 0.677
+      "stepAvgMs": 0.478,
+      "stepP95Ms": 0.884
     },
     "column100_straight_rigid": {
       "standing": 100,
       "of": 100,
       "snaps": 0,
-      "bottomCompression": 59682,
-      "expectedCompression": 67283,
+      "bottomCompression": 61793,
+      "expectedCompression": 69662,
       "topSag": 0.213,
       "nan": false,
-      "stepAvgMs": 0.335,
-      "stepP95Ms": 0.515
+      "stepAvgMs": 0.341,
+      "stepP95Ms": 0.587
     },
     "truss_car": {
       "beams": 157,
@@ -144,8 +159,8 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.379,
-      "stepP95Ms": 0.474
+      "stepAvgMs": 0.413,
+      "stepP95Ms": 0.638
     },
     "truss_anvil2t": {
       "beams": 157,
@@ -154,8 +169,8 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.342,
-      "stepP95Ms": 0.405
+      "stepAvgMs": 0.383,
+      "stepP95Ms": 0.56
     },
     "truss_anvil40t": {
       "beams": 157,
@@ -164,344 +179,182 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.416,
-      "stepP95Ms": 0.528
+      "stepAvgMs": 0.492,
+      "stepP95Ms": 0.722
     },
     "determinism": {
-      "run1": "76e61b89:38",
-      "run2": "76e61b89:38"
+      "run1": "a3e9858d:39",
+      "run2": "a3e9858d:39"
     }
   },
   "box2d3-compat": {
-    "tower_random": {
-      "landed": 42,
-      "missed": 8,
-      "towerPeopleEnd": 3,
-      "peakPeople": 9,
-      "sticky": 0,
+    "tower_player": {
+      "landed": 33,
+      "pivots": 33,
+      "missed": 7,
+      "danglers": 0,
+      "towerPeopleEnd": 10,
+      "peakPeople": 25,
+      "sticky": 2,
+      "pivotToLockSec": 0.29,
       "snaps": {
-        "twist": 8
+        "twist": 2
       },
-      "detached": 39,
+      "detached": 23,
       "collapsed": false,
-      "maxHeight": 12.756,
+      "maxHeight": 8.977,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.013,
-      "stepP95Ms": 0.029,
-      "frameAvgMs": 0.125,
-      "frameP95Ms": 0.308
+      "stepAvgMs": 0.05,
+      "stepP95Ms": 0.088,
+      "frameAvgMs": 0.629,
+      "frameP95Ms": 2.434
     },
-    "tower_straight": {
-      "landed": 46,
-      "missed": 4,
-      "towerPeopleEnd": 5,
-      "peakPeople": 14,
-      "sticky": 0,
+    "tower_passive": {
+      "landed": 38,
+      "pivots": 39,
+      "missed": 1,
+      "danglers": 1,
+      "towerPeopleEnd": 10,
+      "peakPeople": 30,
+      "sticky": 9,
+      "pivotToLockSec": 6.652,
       "snaps": {
-        "twist": 5
+        "twist": 1
       },
-      "detached": 41,
+      "detached": 28,
       "collapsed": false,
-      "maxHeight": 27.468,
+      "maxHeight": 5.779,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.016,
-      "stepP95Ms": 0.029,
-      "frameAvgMs": 0.229,
-      "frameP95Ms": 0.529
-    },
-    "tower_lean": {
-      "landed": 44,
-      "missed": 6,
-      "towerPeopleEnd": 3,
-      "peakPeople": 9,
-      "sticky": 1,
-      "snaps": {
-        "twist": 7
-      },
-      "detached": 41,
-      "collapsed": false,
-      "maxHeight": 18.078,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.017,
-      "stepP95Ms": 0.038,
-      "frameAvgMs": 0.159,
-      "frameP95Ms": 0.366
-    },
-    "tower_balanced": {
-      "landed": 21,
-      "missed": 29,
-      "towerPeopleEnd": 7,
-      "peakPeople": 10,
-      "sticky": 1,
-      "snaps": {
-        "twist": 3
-      },
-      "detached": 14,
-      "collapsed": false,
-      "maxHeight": 12.393,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.013,
-      "stepP95Ms": 0.02,
-      "frameAvgMs": 0.184,
-      "frameP95Ms": 0.425
-    },
-    "pile50_unbreakable": {
-      "landed": 50,
-      "missed": 0,
-      "towerPeopleEnd": 50,
-      "peakPeople": 50,
-      "sticky": 49,
-      "snaps": {},
-      "detached": 0,
-      "collapsed": false,
-      "maxHeight": 14.57,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.029,
-      "stepP95Ms": 0.047,
-      "frameAvgMs": 1.247,
-      "frameP95Ms": 3.3
-    },
-    "column50_straight_rigid": {
-      "standing": 50,
-      "of": 50,
-      "snaps": 0,
-      "bottomCompression": 32897,
-      "expectedCompression": 33641,
-      "topSag": 0.171,
-      "nan": false,
-      "stepAvgMs": 0.015,
-      "stepP95Ms": 0.032
-    },
-    "column50_straight_soft12hz": {
-      "standing": 4,
-      "of": 50,
-      "snaps": 0,
-      "bottomCompression": 4736,
-      "expectedCompression": 33641,
-      "topSag": 16.124,
-      "nan": false,
       "stepAvgMs": 0.037,
-      "stepP95Ms": 0.119
+      "stepP95Ms": 0.06,
+      "frameAvgMs": 0.743,
+      "frameP95Ms": 3.77
     },
-    "column50_lean12cm": {
-      "standing": 1,
-      "of": 50,
-      "snaps": 39,
-      "bottomCompression": null,
-      "expectedCompression": 33641,
-      "topSag": 100.104,
-      "nan": false,
-      "stepAvgMs": 0.107,
-      "stepP95Ms": 0.177
-    },
-    "column100_straight_rigid": {
-      "standing": 100,
-      "of": 100,
-      "snaps": 0,
-      "bottomCompression": 74781,
-      "expectedCompression": 67283,
-      "topSag": 0.811,
-      "nan": false,
-      "stepAvgMs": 0.069,
-      "stepP95Ms": 0.123
-    },
-    "truss_car": {
-      "beams": 157,
-      "pins": 236,
-      "snaps": 0,
-      "carCrossed": true,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.067,
-      "stepP95Ms": 0.081
-    },
-    "truss_anvil2t": {
-      "beams": 157,
-      "pins": 236,
-      "snaps": 0,
-      "carCrossed": true,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.069,
-      "stepP95Ms": 0.082
-    },
-    "truss_anvil40t": {
-      "beams": 157,
-      "pins": 236,
-      "snaps": 3,
-      "carCrossed": true,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.052,
-      "stepP95Ms": 0.083
-    },
-    "determinism": {
-      "run1": "5c300353:72",
-      "run2": "5c300353:72"
-    }
-  },
-  "box2d3-deluxe": {
-    "tower_random": {
-      "landed": 42,
-      "missed": 8,
-      "towerPeopleEnd": 3,
-      "peakPeople": 9,
-      "sticky": 0,
-      "snaps": {
-        "twist": 8
-      },
-      "detached": 39,
-      "collapsed": false,
-      "maxHeight": 12.756,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.015,
-      "stepP95Ms": 0.029,
-      "frameAvgMs": 0.141,
-      "frameP95Ms": 0.334
-    },
-    "tower_straight": {
-      "landed": 46,
-      "missed": 4,
-      "towerPeopleEnd": 5,
-      "peakPeople": 14,
-      "sticky": 0,
-      "snaps": {
-        "twist": 5
-      },
-      "detached": 41,
-      "collapsed": false,
-      "maxHeight": 27.468,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.018,
-      "stepP95Ms": 0.029,
-      "frameAvgMs": 0.248,
-      "frameP95Ms": 0.556
-    },
-    "tower_lean": {
-      "landed": 44,
-      "missed": 6,
-      "towerPeopleEnd": 3,
-      "peakPeople": 9,
-      "sticky": 1,
-      "snaps": {
-        "twist": 7
-      },
-      "detached": 41,
-      "collapsed": false,
-      "maxHeight": 18.078,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.019,
-      "stepP95Ms": 0.04,
-      "frameAvgMs": 0.166,
-      "frameP95Ms": 0.378
-    },
-    "tower_balanced": {
-      "landed": 21,
-      "missed": 29,
-      "towerPeopleEnd": 7,
-      "peakPeople": 10,
-      "sticky": 1,
-      "snaps": {
-        "twist": 3
-      },
-      "detached": 14,
-      "collapsed": false,
-      "maxHeight": 12.393,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.014,
-      "stepP95Ms": 0.021,
-      "frameAvgMs": 0.192,
-      "frameP95Ms": 0.437
-    },
-    "pile50_unbreakable": {
-      "landed": 50,
+    "tower_player_springy12hz": {
+      "landed": 40,
+      "pivots": 40,
       "missed": 0,
-      "towerPeopleEnd": 50,
-      "peakPeople": 50,
-      "sticky": 49,
+      "danglers": 0,
+      "towerPeopleEnd": 40,
+      "peakPeople": 40,
+      "sticky": 14,
+      "pivotToLockSec": 0.885,
       "snaps": {},
       "detached": 0,
       "collapsed": false,
-      "maxHeight": 14.57,
+      "maxHeight": 5.878,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.032,
-      "stepP95Ms": 0.049,
-      "frameAvgMs": 1.287,
-      "frameP95Ms": 3.348
+      "stepAvgMs": 0.04,
+      "stepP95Ms": 0.067,
+      "frameAvgMs": 0.977,
+      "frameP95Ms": 4.275
     },
-    "column50_straight_rigid": {
-      "standing": 50,
-      "of": 50,
-      "snaps": 0,
-      "bottomCompression": 32897,
-      "expectedCompression": 33641,
-      "topSag": 0.171,
-      "nan": false,
-      "stepAvgMs": 0.017,
-      "stepP95Ms": 0.036
-    },
-    "column50_straight_soft12hz": {
-      "standing": 4,
-      "of": 50,
-      "snaps": 0,
-      "bottomCompression": 4736,
-      "expectedCompression": 33641,
-      "topSag": 16.124,
-      "nan": false,
-      "stepAvgMs": 0.039,
-      "stepP95Ms": 0.123
-    },
-    "column50_lean12cm": {
-      "standing": 1,
-      "of": 50,
-      "snaps": 39,
-      "bottomCompression": null,
-      "expectedCompression": 33641,
-      "topSag": 100.104,
-      "nan": false,
-      "stepAvgMs": 0.103,
-      "stepP95Ms": 0.165
-    },
-    "column100_straight_rigid": {
-      "standing": 100,
-      "of": 100,
-      "snaps": 0,
-      "bottomCompression": 74781,
-      "expectedCompression": 67283,
-      "topSag": 0.811,
-      "nan": false,
-      "stepAvgMs": 0.071,
-      "stepP95Ms": 0.128
-    },
-    "truss_car": {
-      "beams": 157,
-      "pins": 236,
-      "snaps": 0,
-      "carCrossed": true,
-      "nan": false,
-      "blowup": false,
-      "stepAvgMs": 0.07,
-      "stepP95Ms": 0.082
-    },
-    "truss_anvil2t": {
-      "beams": 157,
-      "pins": 236,
-      "snaps": 0,
-      "carCrossed": true,
+    "tower_player_balanced": {
+      "landed": 28,
+      "pivots": 29,
+      "missed": 0,
+      "danglers": 0,
+      "towerPeopleEnd": 0,
+      "peakPeople": 28,
+      "sticky": 9,
+      "pivotToLockSec": 0.449,
+      "snaps": {},
+      "detached": 0,
+      "collapsed": true,
+      "maxHeight": 7.867,
       "nan": false,
       "blowup": false,
       "stepAvgMs": 0.074,
-      "stepP95Ms": 0.091
+      "stepP95Ms": 0.155,
+      "frameAvgMs": 0.78,
+      "frameP95Ms": 2.914
+    },
+    "pile40_unbreakable": {
+      "landed": 40,
+      "pivots": 40,
+      "missed": 0,
+      "danglers": 0,
+      "towerPeopleEnd": 40,
+      "peakPeople": 40,
+      "sticky": 14,
+      "pivotToLockSec": 0.636,
+      "snaps": {},
+      "detached": 0,
+      "collapsed": false,
+      "maxHeight": 9.827,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.043,
+      "stepP95Ms": 0.073,
+      "frameAvgMs": 1.038,
+      "frameP95Ms": 4.566
+    },
+    "column50_straight_rigid": {
+      "standing": 50,
+      "of": 50,
+      "snaps": 0,
+      "bottomCompression": 34061,
+      "expectedCompression": 34831,
+      "topSag": 0.171,
+      "nan": false,
+      "stepAvgMs": 0.017,
+      "stepP95Ms": 0.042
+    },
+    "column50_straight_soft12hz": {
+      "standing": 1,
+      "of": 50,
+      "snaps": 0,
+      "bottomCompression": 0,
+      "expectedCompression": 34831,
+      "topSag": 98.651,
+      "nan": false,
+      "stepAvgMs": 0.088,
+      "stepP95Ms": 0.196
+    },
+    "column50_lean12cm": {
+      "standing": 1,
+      "of": 50,
+      "snaps": 36,
+      "bottomCompression": null,
+      "expectedCompression": 34831,
+      "topSag": 99.464,
+      "nan": false,
+      "stepAvgMs": 0.128,
+      "stepP95Ms": 0.212
+    },
+    "column100_straight_rigid": {
+      "standing": 100,
+      "of": 100,
+      "snaps": 0,
+      "bottomCompression": 77424,
+      "expectedCompression": 69662,
+      "topSag": 0.811,
+      "nan": false,
+      "stepAvgMs": 0.077,
+      "stepP95Ms": 0.135
+    },
+    "truss_car": {
+      "beams": 157,
+      "pins": 236,
+      "snaps": 0,
+      "carCrossed": true,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.073,
+      "stepP95Ms": 0.094
+    },
+    "truss_anvil2t": {
+      "beams": 157,
+      "pins": 236,
+      "snaps": 0,
+      "carCrossed": true,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.076,
+      "stepP95Ms": 0.098
     },
     "truss_anvil40t": {
       "beams": 157,
@@ -510,17 +363,201 @@
       "carCrossed": true,
       "nan": false,
       "blowup": false,
-      "stepAvgMs": 0.055,
-      "stepP95Ms": 0.088
+      "stepAvgMs": 0.058,
+      "stepP95Ms": 0.092
     },
     "determinism": {
-      "run1": "5c300353:72",
-      "run2": "5c300353:72"
+      "run1": "ccd74ceb:39",
+      "run2": "ccd74ceb:39"
+    }
+  },
+  "box2d3-deluxe": {
+    "tower_player": {
+      "landed": 33,
+      "pivots": 33,
+      "missed": 7,
+      "danglers": 0,
+      "towerPeopleEnd": 10,
+      "peakPeople": 25,
+      "sticky": 2,
+      "pivotToLockSec": 0.29,
+      "snaps": {
+        "twist": 2
+      },
+      "detached": 23,
+      "collapsed": false,
+      "maxHeight": 8.977,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.05,
+      "stepP95Ms": 0.084,
+      "frameAvgMs": 0.654,
+      "frameP95Ms": 2.49
+    },
+    "tower_passive": {
+      "landed": 38,
+      "pivots": 39,
+      "missed": 1,
+      "danglers": 1,
+      "towerPeopleEnd": 10,
+      "peakPeople": 30,
+      "sticky": 9,
+      "pivotToLockSec": 6.652,
+      "snaps": {
+        "twist": 1
+      },
+      "detached": 28,
+      "collapsed": false,
+      "maxHeight": 5.779,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.048,
+      "stepP95Ms": 0.09,
+      "frameAvgMs": 0.857,
+      "frameP95Ms": 4.199
+    },
+    "tower_player_springy12hz": {
+      "landed": 40,
+      "pivots": 40,
+      "missed": 0,
+      "danglers": 0,
+      "towerPeopleEnd": 40,
+      "peakPeople": 40,
+      "sticky": 14,
+      "pivotToLockSec": 0.885,
+      "snaps": {},
+      "detached": 0,
+      "collapsed": false,
+      "maxHeight": 5.878,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.043,
+      "stepP95Ms": 0.066,
+      "frameAvgMs": 1.015,
+      "frameP95Ms": 4.369
+    },
+    "tower_player_balanced": {
+      "landed": 28,
+      "pivots": 29,
+      "missed": 0,
+      "danglers": 0,
+      "towerPeopleEnd": 0,
+      "peakPeople": 28,
+      "sticky": 9,
+      "pivotToLockSec": 0.449,
+      "snaps": {},
+      "detached": 0,
+      "collapsed": true,
+      "maxHeight": 7.867,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.081,
+      "stepP95Ms": 0.158,
+      "frameAvgMs": 0.855,
+      "frameP95Ms": 3.233
+    },
+    "pile40_unbreakable": {
+      "landed": 40,
+      "pivots": 40,
+      "missed": 0,
+      "danglers": 0,
+      "towerPeopleEnd": 40,
+      "peakPeople": 40,
+      "sticky": 14,
+      "pivotToLockSec": 0.636,
+      "snaps": {},
+      "detached": 0,
+      "collapsed": false,
+      "maxHeight": 9.827,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.048,
+      "stepP95Ms": 0.079,
+      "frameAvgMs": 1.07,
+      "frameP95Ms": 4.714
+    },
+    "column50_straight_rigid": {
+      "standing": 50,
+      "of": 50,
+      "snaps": 0,
+      "bottomCompression": 34061,
+      "expectedCompression": 34831,
+      "topSag": 0.171,
+      "nan": false,
+      "stepAvgMs": 0.019,
+      "stepP95Ms": 0.04
+    },
+    "column50_straight_soft12hz": {
+      "standing": 1,
+      "of": 50,
+      "snaps": 0,
+      "bottomCompression": 0,
+      "expectedCompression": 34831,
+      "topSag": 98.651,
+      "nan": false,
+      "stepAvgMs": 0.088,
+      "stepP95Ms": 0.19
+    },
+    "column50_lean12cm": {
+      "standing": 1,
+      "of": 50,
+      "snaps": 36,
+      "bottomCompression": null,
+      "expectedCompression": 34831,
+      "topSag": 99.464,
+      "nan": false,
+      "stepAvgMs": 0.12,
+      "stepP95Ms": 0.2
+    },
+    "column100_straight_rigid": {
+      "standing": 100,
+      "of": 100,
+      "snaps": 0,
+      "bottomCompression": 77424,
+      "expectedCompression": 69662,
+      "topSag": 0.811,
+      "nan": false,
+      "stepAvgMs": 0.079,
+      "stepP95Ms": 0.139
+    },
+    "truss_car": {
+      "beams": 157,
+      "pins": 236,
+      "snaps": 0,
+      "carCrossed": true,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.076,
+      "stepP95Ms": 0.096
+    },
+    "truss_anvil2t": {
+      "beams": 157,
+      "pins": 236,
+      "snaps": 0,
+      "carCrossed": true,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.076,
+      "stepP95Ms": 0.099
+    },
+    "truss_anvil40t": {
+      "beams": 157,
+      "pins": 236,
+      "snaps": 3,
+      "carCrossed": true,
+      "nan": false,
+      "blowup": false,
+      "stepAvgMs": 0.057,
+      "stepP95Ms": 0.095
+    },
+    "determinism": {
+      "run1": "ccd74ceb:39",
+      "run2": "ccd74ceb:39"
     }
   },
   "meta": {
     "node": "v26.11.0",
     "platform": "darwin arm64",
-    "date": "2026-10-09T09:58:16.708Z"
+    "date": "2026-10-09T22:32:58.151Z"
   }
 }

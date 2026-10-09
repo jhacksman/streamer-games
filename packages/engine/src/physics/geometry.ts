@@ -31,13 +31,22 @@ export function shapeCapsule(p: Physics, shape: ShapeHandle): Capsule | null {
     return { a: c, b: c, r: g.radius };
   }
   if (g.kind === 'box') {
-    const c = g.center ?? { x: 0, y: 0 };
-    const long = g.hy >= g.hx;
-    const half = Math.max(0, (long ? g.hy : g.hx) - (long ? g.hx : g.hy));
-    const along = rotate(long ? { x: 0, y: half } : { x: half, y: 0 }, g.angle ?? 0);
-    return { a: toWorld(t, { x: c.x - along.x, y: c.y - along.y }), b: toWorld(t, { x: c.x + along.x, y: c.y + along.y }), r: long ? g.hx : g.hy };
+    return boxCapsule(t, g.center ?? { x: 0, y: 0 }, g.hx, g.hy, g.angle ?? 0);
   }
-  return null;
+  // Polygon (e.g. the round body): a capsule fitted to its local bounding box.
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of g.vertices) {
+    minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+    minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+  }
+  return boxCapsule(t, { x: (minX + maxX) / 2, y: (minY + maxY) / 2 }, (maxX - minX) / 2, (maxY - minY) / 2, 0);
+}
+
+function boxCapsule(t: Transform, c: Vec2, hx: number, hy: number, angle: number): Capsule {
+  const long = hy >= hx;
+  const half = Math.max(0, (long ? hy : hx) - (long ? hx : hy));
+  const along = rotate(long ? { x: 0, y: half } : { x: half, y: 0 }, angle);
+  return { a: toWorld(t, { x: c.x - along.x, y: c.y - along.y }), b: toWorld(t, { x: c.x + along.x, y: c.y + along.y }), r: long ? hx : hy };
 }
 
 /** Closest points between segments p1-q1 and p2-q2 (Ericson, Real-Time Collision Detection 5.1.9). */

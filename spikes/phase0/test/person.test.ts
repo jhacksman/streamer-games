@@ -107,25 +107,26 @@ describe.each(BACKENDS)('%s goo person', (name) => {
     p.dispose();
   });
 
-  it("a falling person's outstretched arm is what lands", async () => {
+  it("an outstretched arm is solid: it lands on a ledge instead of passing through", async () => {
     const p = await createPhysics(name);
-    // A short ledge to the left, only the stretched left arm can reach it.
-    const ledge = p.createBody({ type: 'static', position: { x: -0.85, y: 0 } });
-    p.addShape(ledge, { kind: 'box', hx: 0.12, hy: 0.1 }, { contactEvents: true, tag: { ground: true } });
+    // A small ledge only the stretched left arm (beam or hand) can reach.
+    const arm = LIMBS.find((l) => l.name === 'armL')!;
+    const reachX = arm.root.x + Math.cos(arm.angle) * (arm.tucked + arm.reach * 0.6);
+    const ledge = p.createBody({ type: 'static', position: { x: reachX, y: 0 } });
+    p.addShape(ledge, { kind: 'box', hx: 0.06, hy: 0.1 }, { contactEvents: true, tag: { ground: true } });
     const person = new Person(p, { id: 1, position: { x: 0, y: 1.2 }, filter: FILTER, limbs: LIMB_BITS.armL, contactEvents: true });
-    settle(p, person, 1);
-    let firstKind: string | null = null;
-    for (let i = 0; i < 120 && !firstKind; i++) {
+    let firstPart: string | null = null;
+    for (let i = 0; i < 120 && !firstPart; i++) {
       person.update();
       p.step(DT);
       for (const c of p.contactBegins()) {
         for (const sh of [c.shapeA, c.shapeB]) {
-          const tag = p.shape(sh)?.opts.tag as PartTag | undefined;
-          if (tag && 'kind' in tag) firstKind = tag.kind;
+          const t = p.shape(sh)?.opts.tag as PartTag | undefined;
+          if (t && 'kind' in t) firstPart = String(t.part);
         }
       }
     }
-    expect(firstKind).toBe('limb');
+    expect(['armL', 'handL']).toContain(firstPart);
     p.dispose();
   });
 

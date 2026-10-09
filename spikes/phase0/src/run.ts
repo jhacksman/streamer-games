@@ -21,7 +21,8 @@ async function tower(name: BackendName, cfg: TowerConfig) {
   const peak = Math.max(...m.peopleAtTiming);
   const atPeak = (a: number[]) => a.filter((_, i) => m.peopleAtTiming[i]! >= peak - 5);
   return {
-    landed: m.landed, missed: m.missed, towerPeopleEnd: m.towerPeople, peakPeople: peak, sticky: m.stickyBonds,
+    landed: m.landed, pivots: m.pivots, missed: m.missed, danglers: m.danglers, towerPeopleEnd: m.towerPeople, peakPeople: peak, sticky: m.stickyBonds,
+    pivotToLockSec: r3(avg(m.pivotTimes)),
     snaps: m.snaps.reduce<Record<string, number>>((o, s) => ((o[s.mode] = (o[s.mode] ?? 0) + 1), o), {}),
     detached: m.detached, collapsed: m.collapsed, maxHeight: r3(m.maxHeight), nan: m.nan, blowup: m.blowup,
     stepAvgMs: r3(avg(atPeak(m.stepMs))), stepP95Ms: r3(pct(atPeak(m.stepMs), 0.95)),
@@ -33,11 +34,11 @@ const results: Record<string, Record<string, unknown>> = {};
 for (const name of BACKENDS) {
   console.error(`running ${name}...`);
   const r: Record<string, unknown> = {};
-  for (const placement of ['random', 'straight', 'lean'] as const) {
-    r[`tower_${placement}`] = await tower(name, { seed: 1, drops: 50, placement, aim: true, dropInterval: 1.6, limits: LIMITS });
-  }
-  r.tower_balanced = await tower(name, { seed: 1, drops: 50, placement: 'random', aim: true, base: 'balanced', dropInterval: 1.6, limits: LIMITS });
-  r.pile50_unbreakable = await tower(name, { seed: 3, drops: 50, placement: 'random', aim: true, dropInterval: 1.2, limits: UNBREAKABLE });
+  r.tower_player = await tower(name, { seed: 1, drops: 40, bot: 'player' });
+  r.tower_passive = await tower(name, { seed: 1, drops: 40, bot: 'passive' });
+  r.tower_player_springy12hz = await tower(name, { seed: 1, drops: 40, bot: 'player', weld: { angularHertz: 12, angularDamping: 0.7 } });
+  r.tower_player_balanced = await tower(name, { seed: 1, drops: 40, bot: 'player', base: 'balanced' });
+  r.pile40_unbreakable = await tower(name, { seed: 3, drops: 40, bot: 'player', limits: UNBREAKABLE });
   for (const [label, people, offset, hz, snapping] of [
     ['column50_straight_rigid', 50, 0, 0, true], ['column50_straight_soft12hz', 50, 0, 12, false],
     ['column50_lean12cm', 50, 0.12, 0, true], ['column100_straight_rigid', 100, 0, 0, false],
