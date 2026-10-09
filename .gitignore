@@ -1,0 +1,28 @@
+# Local agent/session state (never commit)
+.omc/
+.claude/settings.local.json
+
+# Dependencies and builds
+node_modules/
+dist/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
